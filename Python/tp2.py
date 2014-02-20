@@ -74,9 +74,9 @@ def rec2doptimize(I, J):
 def openImage(I):
 	"""Ouvre des images au format jpeg, png et NifTI et les retourne en numpy asarray"""
 
-	if I[-7:] == '.nii.gz' | I[-4:] == '.nii':
+	if (I[-7:] == '.nii.gz') | (I[-4:] == '.nii'):
 		J = np.asarray(nib.load(I).get_data())
-	elif I[-4:] == '.jpg' | I[-4:] == '.png' | I[-5] == '.jpeg':
+	elif (I[-4:] == '.jpg') | (I[-5:] == '.jpeg') | (I[-4:] == '.png'):
 		J = np.asarray(Image.open(I))
 	else:
 		print "Formats d'image acceptés: .nii, .nii.gz, .jpg, .png, .jpeg"
