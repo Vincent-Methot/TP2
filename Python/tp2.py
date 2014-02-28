@@ -5,14 +5,29 @@
 import numpy as np
 import nibabel as nib
 import Image
+from pylab import *
 
-def JointHist(I, J, bin):
+def JointHist(I, J, bin=256):
 	"""Calcule l'histogramme conjoint de deux images de même taille (I et J)
 	en divisant leur intervalle de valeurs en 'bin' sous-intervalles"""
 
-	I = openImage(I)
-	J = openImage(J)
+	if isinstance(I, str):
+		I = ((bin-1) * openImage(I)).astype(int)
+	else:
+		I = ((bin-1) * np.asarray(I)).astype(int)
 
+	if isinstance(J, str):
+		J = ((bin-1) * openImage(J)).astype(int)
+	else:
+		J = ((bin-1) * np.asarray(J)).astype(int)
+
+	H = np.zeros([bin, bin], dtype=int)
+
+	for x in range(bin):
+		for y in range(bin):
+			H[I[x,y], J[x,y]] += 1
+
+	return H
 
 def SSD(I, J):
 	"""Calcule la somme des différences au carré entre 2 images (I et J)
@@ -72,14 +87,22 @@ def rec2doptimize(I, J):
 
 
 def openImage(I):
-	"""Ouvre des images au format jpeg, png et NifTI et les retourne en numpy asarray"""
+	"""Ouvre des images au format jpeg, png et NifTI et les retourne en numpy array.
+	Normalise et transforme en float array les autres types d'entrée (si complexe,
+	prend la valeur absolue)"""
 
-	if (I[-7:] == '.nii.gz') | (I[-4:] == '.nii'):
-		J = np.asarray(nib.load(I).get_data())
-	elif (I[-4:] == '.jpg') | (I[-5:] == '.jpeg') | (I[-4:] == '.png'):
-		J = np.asarray(Image.open(I))
+	if isinstance(I, str):
+		if (I[-7:] == '.nii.gz') | (I[-4:] == '.nii'):
+			J = np.asarray(nib.load(I).get_data(), dtype=float)
+		elif (I[-4:] == '.jpg') | (I[-5:] == '.jpeg') | (I[-4:] == '.png'):
+			J = np.asarray(Image.open(I), dtype=float)
+		else:
+			print "Formats d'image acceptés: .nii, .nii.gz, .jpg, .png, .jpeg"
 	else:
-		print "Formats d'image acceptés: .nii, .nii.gz, .jpg, .png, .jpeg"
+		J = np.abs(np.asarray(I)).astype(float)
+
+	# Normalisation de l'image
+	J = (J - J.min())/J.max()
 
 	return J
 		
