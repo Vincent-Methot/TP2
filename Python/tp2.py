@@ -83,3 +83,4 @@ def openImage(I):
 
 	return J
 		
+# Test par J. Fouquet
