@@ -7,24 +7,22 @@ import nibabel as nib
 import Image
 from pylab import *
 
-def JointHist(I, J, bin=256):
+def JointHist(I, J, nbin=256):
 	"""Calcule l'histogramme conjoint de deux images de même taille (I et J)
-	en divisant leur intervalle de valeurs en 'bin' sous-intervalles"""
+	en divisant leur intervalle de valeurs en 'nbin' sous-intervalles"""
 
-	if isinstance(I, str):
-		I = ((bin-1) * openImage(I)).astype(int)
-	else:
-		I = ((bin-1) * np.asarray(I)).astype(int)
+	I = ((nbin-1) * openImage(I)).astype(int)
+	print I.max(), I.min(), I.std()
+	J = ((nbin-1) * openImage(J)).astype(int)
+	print J.max(), J.min(), J.std()
+	H = np.zeros([nbin, nbin], dtype=int)
+	print H.shape
 
-	if isinstance(J, str):
-		J = ((bin-1) * openImage(J)).astype(int)
-	else:
-		J = ((bin-1) * np.asarray(J)).astype(int)
+#	i, j = np.meshgrid(range(nbin), range(nbin))
+#	H[i, j] = ((I == i) & (J == j)).sum()
 
-	H = np.zeros([bin, bin], dtype=int)
-
-	for x in range(bin):
-		for y in range(bin):
+	for x in range(nbin):
+		for y in range(nbin):
 			H[I[x,y], J[x,y]] += 1
 
 	return H
@@ -102,7 +100,7 @@ def openImage(I):
 		J = np.abs(np.asarray(I)).astype(float)
 
 	# Normalisation de l'image
-	J = (J - J.min())/J.max()
+	J = (J - J.min()) / (J - J.min()).max()
 
 	return J
 		
