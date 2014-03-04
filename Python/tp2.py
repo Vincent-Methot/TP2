@@ -18,15 +18,19 @@ def JointHist(I, J, nbin=256):
 	H = np.zeros([nbin, nbin], dtype=int)
 	print H.shape
 
+	# À faire: s'assurer que les deux images aient les même dimensions
+
 	# i, j = np.meshgrid(range(nbin), range(nbin))
-	
+
 	# Pas efficace
 	# for i in range(nbin):
 	# 	for j in range(nbin):
 	# 		H[i, j] = ((I == i) & (J == j)).sum()
 
-	for x in range(nbin):
-		for y in range(nbin):
+	# Ne va fonctionner que pour les images 2D
+	
+	for x in range(I.shape[0]):
+		for y in range(I.shape[1]):
 			H[I[x,y], J[x,y]] += 1
 
 	return H
