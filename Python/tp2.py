@@ -19,14 +19,15 @@ def JointHist(I, J, nbin=256):
 	print H.shape
 
 	# i, j = np.meshgrid(range(nbin), range(nbin))
+	
+	# Pas efficace
+	# for i in range(nbin):
+	# 	for j in range(nbin):
+	# 		H[i, j] = ((I == i) & (J == j)).sum()
 
-	for i in range(nbin):
-		for j in range(nbin):
-			H[i, j] = ((I == i) & (J == j)).sum()
-
-	# for x in range(nbin):
-	# 	for y in range(nbin):
-	# 		H[I[x,y], J[x,y]] += 1
+	for x in range(nbin):
+		for y in range(nbin):
+			H[I[x,y], J[x,y]] += 1
 
 	return H
 
