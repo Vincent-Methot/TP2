@@ -18,7 +18,7 @@ def JointHist(I, J, nbin=256):
 	H = np.zeros([nbin, nbin], dtype=int)
 	print H.shape
 
-	# À faire: s'assurer que les deux images aient les même dimensions
+	# À faire: s'assurer que les deux images aient les même dimensions (interpolation)
 
 	# i, j = np.meshgrid(range(nbin), range(nbin))
 
@@ -28,16 +28,22 @@ def JointHist(I, J, nbin=256):
 	# 		H[i, j] = ((I == i) & (J == j)).sum()
 
 	# Ne va fonctionner que pour les images 2D
-	
+
 	for x in range(I.shape[0]):
 		for y in range(I.shape[1]):
 			H[I[x,y], J[x,y]] += 1
 
 	return H
 
-def SSD(I, J):
+def SSD(I, J, nbin=256):
 	"""Calcule la somme des différences au carré entre 2 images (I et J)
 	de même taille"""
+
+	H = JointHist(I, J, nbin)
+	i, j = np.meshgrid(range(nbin), range(nbin))
+	SSD = (H*(i - j)**2).sum()
+
+	return SSD
 
 def CR(I, J):
 	"""Calcule le coefficient de corrélation entre 2 images (I et J)
