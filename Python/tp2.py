@@ -39,18 +39,45 @@ def SSD(I, J, nbin=256):
 	"""Calcule la somme des différences au carré entre 2 images (I et J)
 	de même taille"""
 
+	# À partir de l'histogramme
 	H = JointHist(I, J, nbin)
 	i, j = np.meshgrid(range(nbin), range(nbin))
 	SSD = (H*(i - j)**2).sum()
 
+	# Sans histogramme
+
 	return SSD
 
-def CR(I, J):
+def CR(I, J, nbins=256):
 	"""Calcule le coefficient de corrélation entre 2 images (I et J)
 	de même taille"""
 
-def IM(I, J):
+	# À partir de l'histogramme
+	H = JointHist(I, J, nbin)
+	i, j = np.meshgrid(range(nbin), range(nbin))
+	meanI = 1. / H.sum() * (H * i).sum()
+	meanJ = 1. / H.sum() * (H * j).sum()
+	covariance = (H * (i - meanI) * (j - meanJ)).sum()
+	autocovI = 1. / H.sum() * (H * i**2 - meanI**2).sum()
+	autocovJ = 1. / H.sum() * (H * j**2 - meanJ**2).sum()
+	CR = covariance / np.sqrt(autocovI * autocovJ)
+
+	# Sans histogramme
+
+	return CR
+
+def IM(I, J, nbin=256):
 	"""Calcule l'information mutuelle entre 2 images de même taille"""
+
+	# À partir de l'histogramme
+	H = JointHist(I, J, nbin)
+
+	# Broadcasting!
+	Hi = np.empty(list(H.shape))
+	Hj = np.empty(list(H.shape))
+	Hi[:] = H.sum(0)
+	Hj[:] = H.sum(1)
+	IM = H.astype(float) / H.sum() * log(H.sum() * H.astype(float) / (Hi * Hj))
 
 def trans_rigide(theta, omega, phi, p, q, r):
 	"""Renvoie la matrice de transformation rigide en coordonnées homogènes
