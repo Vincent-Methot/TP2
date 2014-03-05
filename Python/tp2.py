@@ -77,7 +77,9 @@ def IM(I, J, nbin=256):
 	Hj = np.empty(list(H.shape))
 	Hi[:] = H.sum(0)
 	Hj[:] = H.sum(1)
-	IM = H.astype(float) / H.sum() * log(H.sum() * H.astype(float) / (Hi * Hj))
+	IM = H.astype(float) / H.sum() * np.log(H.sum() * H.astype(float) / (Hi * Hj))
+	
+	return IM
 
 def trans_rigide(theta, omega, phi, p, q, r):
 	"""Renvoie la matrice de transformation rigide en coordonnées homogènes
