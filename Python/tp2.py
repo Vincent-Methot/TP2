@@ -105,10 +105,8 @@ def IM(I, J, nbin=256):
 
 	print "Information mutuelle:", IM
 
-=======
 	IM = H.astype(float) / H.sum() * np.log(H.sum() * H.astype(float) / (Hi * Hj))
 	
->>>>>>> 5a052d9fd459e3c6de2858cc04641c0ffca9469f
 	return IM
 
 def trans_rigide(theta, omega, phi, p, q, r):
@@ -176,4 +174,3 @@ def openImage(I):
 	J = (J - J.min()) / (J - J.min()).max()
 
 	return J
-		
