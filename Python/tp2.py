@@ -114,6 +114,17 @@ def trans_rigide(theta, omega, phi, p, q, r):
 	phi: 		angle de rotation autour de z
 	(p, q, r): 	vecteur de translation"""
 
+	T = np.matrix([[1, 0, 0, p], [0, 1, 0, q], [0, 0, 1, r], [0, 0, 0, 1]])
+	Rx = np.matrix([[1, 0, 0, 0], [0, np.cos(theta), -np.sin(theta), 0], 
+		[0, np.sin(theta), np.cos(theta), 0], [0, 0, 0, 1]])
+	Ry = np.matrix([[np.cos(omega), 0, -np.sin(omega), 0], [0, 1, 0, 0], 
+		[np.sin(omega), 0, np.cos(omega), 0], [0, 0, 0, 1]])
+	Rz = np.matrix([[np.cos(phi), -np.sin(phi), 0, 0], [np.sin(phi), np.cos(phi), 0, 0], 
+		[0, 0, 1, 0], [0, 0, 0, 1]])
+	Transformation = T * Rz * Ry * Rx
+
+	return Transformation
+
 def similitude(s, theta, omega, phi, p, q, r):
 	"""Revoie la matrice de transformation rigide (+homothétie)
 	en coordonnées homogènes
