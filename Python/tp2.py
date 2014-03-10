@@ -87,7 +87,7 @@ def IM(I, J, nbin=256):
 	Hj = np.empty(list(H.shape))
 	Hi[:] = H.sum(0)
 	Hj[:] = H.sum(1)
-<<<<<<< HEAD
+
 	if H.ndim == 3:
 		Hk = np.empty(list(H.shape)) 
 		Hk[:] = H.sum(2)
