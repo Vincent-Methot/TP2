@@ -135,6 +135,9 @@ def similitude(s, theta, omega, phi, p, q, r):
 	phi: 		angle de rotation autour de z
 	(p, q, r): 	vecteur de translation"""
 
+	Transformation = np.matrix(np.diag([s, s, s, 1])) * trans_rigide(theta, omega, phi, p, q, r)
+	return Transformation
+
 def translation(I, p, q):
 	"""Retourne une nouvelle image correspondant à la translatée
 	de l'image 'I' par le vecteur t = (p, q) (p et q doivent être des float)
