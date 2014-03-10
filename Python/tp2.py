@@ -9,7 +9,12 @@ from pylab import *
 
 def JointHist(I, J, nbin=256):
 	"""Calcule l'histogramme conjoint de deux images de même taille (I et J)
-	en divisant leur intervalle de valeurs en 'nbin' sous-intervalles"""
+	en divisant leur intervalle de valeurs en 'nbin' sous-intervalles
+
+	Example
+	-------
+
+	>>> H = tp2.JointHist('../Data/I4.jpg', '../Data/J4.jpg')"""
 
 	I = ((nbin-1) * openImage(I)).astype(int)
 	print I.max(), I.min(), I.std()
@@ -67,7 +72,12 @@ def CR(I, J, nbins=256):
 	return CR
 
 def IM(I, J, nbin=256):
-	"""Calcule l'information mutuelle entre 2 images de même taille"""
+	"""Calcule l'information mutuelle entre 2 images de même taille
+
+	Example
+	-------
+
+	>>> IM = tp2.JointHist('../Data/I4.jpg', '../Data/J4.jpg')"""
 
 	# À partir de l'histogramme
 	H = JointHist(I, J, nbin)
@@ -80,13 +90,19 @@ def IM(I, J, nbin=256):
 	if H.ndim == 3:
 		Hk = np.empty(list(H.shape)) 
 		Hk[:] = H.sum(2)
+		Hk[Hk == 0] = Hk.sum()
 	else:
 		Hk = 1
 
 	# On remplace les 0 par des 1 dans l'histogramme
+	# Il reste plein de choses à optimiser...
 
 	H[H == 0] = H.sum()
-	IM = H.astype(float) / H.sum() * log(H.sum() * H.astype(float) / (Hi * Hj * Hk))
+	Hi[Hi == 0] = Hi.sum()
+	Hj[Hj == 0] = Hj.sum()
+	IM = (H.astype(float) / H.sum() * log(H.sum() * H.astype(float) / (Hi * Hj * Hk))).sum()
+
+	print "Information mutuelle:", IM
 
 	return IM
 
