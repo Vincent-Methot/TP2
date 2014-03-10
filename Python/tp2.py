@@ -4,6 +4,7 @@
 
 import numpy as np
 import nibabel as nib
+from scipy.interpolate import griddata
 import Image
 from pylab import *
 
@@ -142,7 +143,10 @@ def translation(I, p, q):
 	"""Retourne une nouvelle image correspondant à la translatée
 	de l'image 'I' par le vecteur t = (p, q) (p et q doivent être des float)
 
-	La gestion de l'interpolation est effectuée par [module d'interpolation]"""
+	La gestion de l'interpolation est effectuée par scipy.interpolate"""
+
+	I = openImage(I)
+
 
 def rec2dtrans(I, J):
 	"""Recalage 2D minimisant la SSD et considérant uniquement les translations.
@@ -164,8 +168,6 @@ def rec2doptimize(I, J):
 	"""Recalage 2D minimisant la SSD par une descente de gradient optimisée.
 	Considère l'ensemble des transformations rigides."""
 
-
-
 def openImage(I):
 	"""Ouvre des images au format jpeg, png et NifTI et les retourne en numpy array.
 	Normalise et transforme en float array les autres types d'entrée (si complexe,
@@ -185,5 +187,3 @@ def openImage(I):
 	J = (J - J.min()) / (J - J.min()).max()
 
 	return J
-		
-
