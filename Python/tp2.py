@@ -83,7 +83,9 @@ def IM(I, J, nbin=256):
 	else:
 		Hk = 1
 
-	# 
+	# On remplace les 0 par des 1 dans l'histogramme
+
+	H[H == 0] = H.sum()
 	IM = H.astype(float) / H.sum() * log(H.sum() * H.astype(float) / (Hi * Hj * Hk))
 
 def trans_rigide(theta, omega, phi, p, q, r):
