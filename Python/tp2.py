@@ -87,6 +87,7 @@ def IM(I, J, nbin=256):
 	Hj = np.empty(list(H.shape))
 	Hi[:] = H.sum(0)
 	Hj[:] = H.sum(1)
+<<<<<<< HEAD
 	if H.ndim == 3:
 		Hk = np.empty(list(H.shape)) 
 		Hk[:] = H.sum(2)
@@ -104,6 +105,10 @@ def IM(I, J, nbin=256):
 
 	print "Information mutuelle:", IM
 
+=======
+	IM = H.astype(float) / H.sum() * np.log(H.sum() * H.astype(float) / (Hi * Hj))
+	
+>>>>>>> 5a052d9fd459e3c6de2858cc04641c0ffca9469f
 	return IM
 
 def trans_rigide(theta, omega, phi, p, q, r):
