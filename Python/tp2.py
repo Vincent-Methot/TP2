@@ -7,6 +7,8 @@ import nibabel as nib
 from scipy.interpolate import griddata
 import Image
 from pylab import *
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
 
 def JointHist(I, J, nbin=256):
 	"""Calcule l'histogramme conjoint de deux images de même taille (I et J)
@@ -249,3 +251,19 @@ def openImage(I):
 	J = (J - J.min()) / (J - J.min()).max()
 
 	return J
+
+def grille_test():
+
+	fig = plt.figure()
+	ax = fig.add_subplot(111, projection='3d')
+
+	xs, ys, zs = np.mgrid[:10,:10,:5]
+	ax.scatter(xs, ys, zs)
+
+	ax.set_xlabel('X Label')
+	ax.set_ylabel('Y Label')
+	ax.set_zlabel('Z Label')
+
+	plt.show()
+	
+	return xs, ys, zs
