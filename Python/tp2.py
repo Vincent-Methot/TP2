@@ -11,43 +11,43 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 
 def JointHist(I, J, nbin=256):
-	"""Calcule l'histogramme conjoint de deux images de même taille (I et J)
-	en divisant leur intervalle de valeurs en 'nbin' sous-intervalles
+    """Calcule l'histogramme conjoint de deux images de même taille (I et J)
+    en divisant leur intervalle de valeurs en 'nbin' sous-intervalles
 
-	Paramètres
-	----------
-	I et J: Images (2D) en format NifTi-1, jpg ou png.
-	nbin: int, optionnel. Le nombre de bins pour le calcul de
-	l'histogramme. 256 par défaut.
+    Paramètres
+    ----------
+    I et J: Images (2D) en format NifTi-1, jpg ou png.
+    nbin: int, optionnel. Le nombre de bins pour le calcul de
+    l'histogramme. 256 par défaut.
 
-	Exemple
-	-------
+    Exemple
+    -------
 
-	>>> H = tp2.JointHist('../Data/I4.jpg', '../Data/J4.jpg')"""
+    >>> H = tp2.JointHist('../Data/I4.jpg', '../Data/J4.jpg')"""
 
-	I = ((nbin-1) * openImage(I)).astype(int)
-	print I.max(), I.min(), I.std()
-	J = ((nbin-1) * openImage(J)).astype(int)
-	print J.max(), J.min(), J.std()
-	H = np.zeros([nbin, nbin], dtype=int)
-	print H.shape
+    I = ((nbin-1) * openImage(I)).astype(int)
+    print I.max(), I.min(), I.std()
+    J = ((nbin-1) * openImage(J)).astype(int)
+    print J.max(), J.min(), J.std()
+    H = np.zeros([nbin, nbin], dtype=int)
+    print H.shape
 
-	# À faire: s'assurer que les deux images aient les même dimensions (interpolation)
+    # À faire: s'assurer que les deux images aient les même dimensions (interpolation)
 
-	# i, j = np.meshgrid(range(nbin), range(nbin))
+    # i, j = np.meshgrid(range(nbin), range(nbin))
 
-	# Pas efficace
-	# for i in range(nbin):
-	# 	for j in range(nbin):
-	# 		H[i, j] = ((I == i) & (J == j)).sum()
+    # Pas efficace
+    # for i in range(nbin):
+    #     for j in range(nbin):
+    #         H[i, j] = ((I == i) & (J == j)).sum()
 
-	# Ne va fonctionner que pour les images 2D
+    # Ne va fonctionner que pour les images 2D
 
-	for x in range(I.shape[0]):
-		for y in range(I.shape[1]):
-			H[I[x,y], J[x,y]] += 1
+    for x in range(I.shape[0]):
+        for y in range(I.shape[1]):
+            H[I[x,y], J[x,y]] += 1
 
-	return H
+    return H
 
 
 def verifSommeHisto(I, J, nbin=256):
@@ -104,186 +104,209 @@ et du max de l'image. Défaut: [0,1].
 
 
 def SSD(I, J, nbin=256):
-	"""Calcule la somme des différences au carré entre 2 images (I et J)
-	de même taille"""
+    """Calcule la somme des différences au carré entre 2 images (I et J)
+    de même taille"""
 
-	# À partir de l'histogramme
-	H = JointHist(I, J, nbin)
-	i, j = np.meshgrid(range(nbin), range(nbin))
-	SSD = (H*(i - j)**2).sum()
+    # À partir de l'histogramme
+    H = JointHist(I, J, nbin)
+    i, j = np.meshgrid(range(nbin), range(nbin))
+    SSD = (H*(i - j)**2).sum()
 
-	# Sans histogramme
+    # Sans histogramme
 
-	return SSD
+    return SSD
 
 def CR(I, J, nbins=256):
-	"""Calcule le coefficient de corrélation entre 2 images (I et J)
-	de même taille"""
+    """Calcule le coefficient de corrélation entre 2 images (I et J)
+    de même taille"""
 
-	# À partir de l'histogramme
-	H = JointHist(I, J, nbin)
-	i, j = np.meshgrid(range(nbin), range(nbin))
-	meanI = 1. / H.sum() * (H * i).sum()
-	meanJ = 1. / H.sum() * (H * j).sum()
-	covariance = (H * (i - meanI) * (j - meanJ)).sum()
-	autocovI = 1. / H.sum() * (H * i**2 - meanI**2).sum()
-	autocovJ = 1. / H.sum() * (H * j**2 - meanJ**2).sum()
-	CR = covariance / np.sqrt(autocovI * autocovJ)
+    # À partir de l'histogramme
+    H = JointHist(I, J, nbin)
+    i, j = np.meshgrid(range(nbin), range(nbin))
+    meanI = 1. / H.sum() * (H * i).sum()
+    meanJ = 1. / H.sum() * (H * j).sum()
+    covariance = (H * (i - meanI) * (j - meanJ)).sum()
+    autocovI = 1. / H.sum() * (H * i**2 - meanI**2).sum()
+    autocovJ = 1. / H.sum() * (H * j**2 - meanJ**2).sum()
+    CR = covariance / np.sqrt(autocovI * autocovJ)
 
-	# Sans histogramme
+    # Sans histogramme
 
-	return CR
+    return CR
 
 def IM(I, J, nbin=256):
-	"""Calcule l'information mutuelle entre 2 images de même taille
+    """Calcule l'information mutuelle entre 2 images de même taille
 
-	Exemple
-	-------
+    Exemple
+    -------
 
-	>>> IM = tp2.JointHist('../Data/I4.jpg', '../Data/J4.jpg')"""
+    >>> IM = tp2.JointHist('../Data/I4.jpg', '../Data/J4.jpg')"""
 
-	# À partir de l'histogramme
-	H = JointHist(I, J, nbin)
+    # À partir de l'histogramme
+    H = JointHist(I, J, nbin)
 
-	# Broadcasting!
-	Hi = np.empty(list(H.shape))
-	Hj = np.empty(list(H.shape))
-	Hi[:] = H.sum(0)
-	Hj[:] = H.sum(1)
+    # Broadcasting!
+    Hi = np.empty(list(H.shape))
+    Hj = np.empty(list(H.shape))
+    Hi[:] = H.sum(0)
+    Hj[:] = H.sum(1)
 
-	if H.ndim == 3:
-		Hk = np.empty(list(H.shape)) 
-		Hk[:] = H.sum(2)
-		Hk[Hk == 0] = Hk.sum()
-	else:
-		Hk = 1
+    if H.ndim == 3:
+        Hk = np.empty(list(H.shape)) 
+        Hk[:] = H.sum(2)
+        Hk[Hk == 0] = Hk.sum()
+    else:
+        Hk = 1
 
-	# On remplace les 0 par des 1 dans l'histogramme
-	# Il reste plein de choses à optimiser...
+    # On remplace les 0 par des 1 dans l'histogramme
+    # Il reste plein de choses à optimiser...
 
-	H[H == 0] = H.sum()
-	Hi[Hi == 0] = Hi.sum()
-	Hj[Hj == 0] = Hj.sum()
-	IM = (H.astype(float) / H.sum() * log(H.sum() * H.astype(float) / (Hi * Hj * Hk))).sum()
+    H[H == 0] = H.sum()
+    Hi[Hi == 0] = Hi.sum()
+    Hj[Hj == 0] = Hj.sum()
+    IM = (H.astype(float) / H.sum() * log(H.sum() * H.astype(float) / (Hi * Hj * Hk))).sum()
 
-	print "Information mutuelle:", IM	
-	return IM
+    print "Information mutuelle:", IM    
+    return IM
 
 def trans_rigide(theta, omega, phi, p, q, r):
-	"""Renvoie la matrice de transformation rigide en coordonnées homogènes
-	-------------------------------------------------------------------
-	theta: 		angle de rotation autour de x
-	omega: 		angle de rotation autour de y
-	phi: 		angle de rotation autour de z
-	(p, q, r): 	vecteur de translation
+    """Renvoie la matrice de transformation rigide en coordonnées homogènes
+    -------------------------------------------------------------------
+    theta:         angle de rotation autour de x
+    omega:         angle de rotation autour de y
+    phi:         angle de rotation autour de z
+    (p, q, r):     vecteur de translation
 
-	Voir aussi
-	----------
-	gille_test: test d'une transformation à l'aide d'une grille de points"""
+    Voir aussi
+    ----------
+    gille_test: test d'une transformation à l'aide d'une grille de points"""
 
-	T = np.matrix([[1, 0, 0, p], [0, 1, 0, q], [0, 0, 1, r], [0, 0, 0, 1]])
-	Rx = np.matrix([[1, 0, 0, 0], [0, np.cos(theta), -np.sin(theta), 0], 
-		[0, np.sin(theta), np.cos(theta), 0], [0, 0, 0, 1]])
-	Ry = np.matrix([[np.cos(omega), 0, -np.sin(omega), 0], [0, 1, 0, 0], 
-		[np.sin(omega), 0, np.cos(omega), 0], [0, 0, 0, 1]])
-	Rz = np.matrix([[np.cos(phi), -np.sin(phi), 0, 0], [np.sin(phi), np.cos(phi), 0, 0], 
-		[0, 0, 1, 0], [0, 0, 0, 1]])
-	Transformation = T * Rz * Ry * Rx
+    T = np.matrix([[1, 0, 0, p], [0, 1, 0, q], [0, 0, 1, r], [0, 0, 0, 1]])
+    Rx = np.matrix([[1, 0, 0, 0], [0, np.cos(theta), -np.sin(theta), 0], 
+        [0, np.sin(theta), np.cos(theta), 0], [0, 0, 0, 1]])
+    Ry = np.matrix([[np.cos(omega), 0, -np.sin(omega), 0], [0, 1, 0, 0], 
+        [np.sin(omega), 0, np.cos(omega), 0], [0, 0, 0, 1]])
+    Rz = np.matrix([[np.cos(phi), -np.sin(phi), 0, 0], [np.sin(phi), np.cos(phi), 0, 0], 
+        [0, 0, 1, 0], [0, 0, 0, 1]])
+    Transformation = T * Rz * Ry * Rx
 
-	return Transformation
+    return Transformation
 
 def similitude(s, theta, omega, phi, p, q, r):
-	"""Revoie la matrice de transformation rigide (+homothétie)
-	en coordonnées homogènes
-	-------------------------------------------------------------------
-	s: 			rapport de l'homothétie
-	theta: 		angle de rotation autour de x
-	omega: 		angle de rotation autour de y
-	phi: 		angle de rotation autour de z
-	(p, q, r): 	vecteur de translation
+    """Revoie la matrice de transformation rigide (+homothétie)
+    en coordonnées homogènes
+    -------------------------------------------------------------------
+    s:             rapport de l'homothétie
+    theta:         angle de rotation autour de x
+    omega:         angle de rotation autour de y
+    phi:         angle de rotation autour de z
+    (p, q, r):     vecteur de translation
 
-	Voir aussi
-	----------
-	gille_test: test d'une transformation à l'aide d'une grille de points"""
+    Voir aussi
+    ----------
+    gille_test: test d'une transformation à l'aide d'une grille de points"""
 
-	Transformation = np.matrix(np.diag([s, s, s, 1])) * trans_rigide(theta, omega, phi, p, q, r)
-	return Transformation
+    Transformation = np.matrix(np.diag([s, s, s, 1])) * trans_rigide(theta, omega, phi, p, q, r)
+    return Transformation
 
 def translation(I, p, q):
-	"""Retourne une nouvelle image correspondant à la translatée
-	de l'image 'I' par le vecteur t = (p, q) (p et q doivent être des float)
+    """Retourne une nouvelle image correspondant à la translatée
+    de l'image 'I' par le vecteur t = (p, q) (p et q doivent être des float)
 
-	La gestion de l'interpolation est effectuée par scipy.interpolate"""
+    La gestion de l'interpolation est effectuée par scipy.interpolate"""
 
-	I = openImage(I)
+    I = openImage(I)
+    dimensions = ( int(ceil(I.shape[0] + abs(p))), int(ceil(I.shape[1] + abs(q))) )
+    J[p:, q:] = I
+
+    return I, J
 
 
 def rec2dtrans(I, J):
-	"""Recalage 2D minimisant la SSD et considérant uniquement les translations.
-	L'énergie SSD correspondant à chaque état est sauvegardée."""
+    """Recalage 2D minimisant la SSD et considérant uniquement les translations.
+    L'énergie SSD correspondant à chaque état est sauvegardée."""
 
 def rotation(I, theta):
-	"""Application d'une rotation d'angle 'theta' et de centre (0, 0)
-	(coin supérieur gauche) à l'image 'I'"""
+    """Application d'une rotation d'angle 'theta' et de centre (0, 0)
+    (coin supérieur gauche) à l'image 'I'"""
 
 def rec2drot(I, J):
-	"""Recalage 2D minimisant la SSD et considérant uniquement les rotations.
-	L'énergie SSD correspondant à chaque état est sauvegardée."""
+    """Recalage 2D minimisant la SSD et considérant uniquement les rotations.
+    L'énergie SSD correspondant à chaque état est sauvegardée."""
 
 def rec2dpasfixe(I, J):
-	"""Recalage 2D minimisant la SSD par une descente de gradient.
-	Considère l'ensemble des transformations rigides."""
+    """Recalage 2D minimisant la SSD par une descente de gradient.
+    Considère l'ensemble des transformations rigides."""
 
 def rec2doptimize(I, J):
-	"""Recalage 2D minimisant la SSD par une descente de gradient optimisée.
-	Considère l'ensemble des transformations rigides."""
+    """Recalage 2D minimisant la SSD par une descente de gradient optimisée.
+    Considère l'ensemble des transformations rigides."""
 
 
 
 def openImage(I):
-	"""Ouvre des images au format jpeg, png et NifTI et les retourne en numpy array.
-	Normalise et transforme en float array les autres types d'entrée (si complexe,
-	prend la valeur absolue)"""
+    """Ouvre des images au format jpeg, png et NifTI et les retourne en numpy array.
+    Normalise et transforme en float array les autres types d'entrée (si complexe,
+    prend la valeur absolue)"""
 
-	if isinstance(I, str):
-		if (I[-7:] == '.nii.gz') | (I[-4:] == '.nii'):
-			J = np.asarray(nib.load(I).get_data(), dtype=float)
-		elif (I[-4:] == '.jpg') | (I[-5:] == '.jpeg') | (I[-4:] == '.png'):
-			J = np.asarray(Image.open(I), dtype=float)
-		else:
-			print "Formats d'image acceptés: .nii, .nii.gz, .jpg, .png, .jpeg"
-	else:
-		J = np.abs(np.asarray(I)).astype(float)
+    if isinstance(I, str):
+        if (I[-7:] == '.nii.gz') | (I[-4:] == '.nii'):
+            J = np.asarray(nib.load(I).get_data(), dtype=float)
+        elif (I[-4:] == '.jpg') | (I[-5:] == '.jpeg') | (I[-4:] == '.png'):
+            J = np.asarray(Image.open(I), dtype=float)
+        else:
+            print "Formats d'image acceptés: .nii, .nii.gz, .jpg, .png, .jpeg"
+    else:
+        J = np.abs(np.asarray(I)).astype(float)
 
-	# Normalisation de l'image
-	J = (J - J.min()) / (J - J.min()).max()
+    # Normalisation de l'image
+    J = (J - J.min()) / (J - J.min()).max()
 
-	return J
+    return J
 
 def grille_test(transformation, xmax = 10, ymax = 10, zmax = 5):
-	"""Test des transformations à l'aide d'une grille de points.
-	---------------------------------------------------------
-	transformation:		matrice de transformation 3D en coordonnées homogènes
-	xmax, ymax, zmax:	limites de la grille de point (min à 0)
-	
-	Exemple:
-	--------
-	tp2.grille_test([[2, 0, 0, 5.5], [0, 3, 0, 4.5], [0, 0, 1, 4.5], [0, 0, 0, 1]])"""
+    """Test des transformations à l'aide d'une grille de points.
+    ---------------------------------------------------------
+    transformation:        matrice de transformation 3D en coordonnées homogènes
+    xmax, ymax, zmax:    limites de la grille de point (min à 0)
+    
+    Exemple:
+    --------
+    tp2.grille_test([[2, 0, 0, 5.5], [0, 3, 0, 4.5], [0, 0, 1, 4.5], [0, 0, 0, 1]])"""
 
-	fig = plt.figure()
-	ax = fig.add_subplot(111, projection='3d')
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
 
-	xis, yis, zis = np.mgrid[:xmax,:ymax,:zmax]
-	pis = np.matrix([xis.ravel(), yis.ravel(), zis.ravel(), ones(xis.shape).ravel()]).T
-	ax.scatter(xis, yis, zis, c='b')
+    xis, yis, zis = np.mgrid[:xmax,:ymax,:zmax]
+    pis = np.matrix([xis.ravel(), yis.ravel(), zis.ravel(), ones(xis.shape).ravel()]).T
+    ax.scatter(xis, yis, zis, c='b')
 
-	pfs = pis * transformation
-	xfs, yfs, zfs, uns = array(pfs.T)
-	ax.scatter(xfs, yfs, zfs, c='r')
+    pfs = pis * transformation
+    xfs, yfs, zfs, uns = array(pfs.T)
+    ax.scatter(xfs, yfs, zfs, c='r')
 
-	ax.set_xlabel('X Label')
-	ax.set_ylabel('Y Label')
-	ax.set_zlabel('Z Label')
-	plt.axis('tight')
+    ax.set_xlabel('X Label')
+    ax.set_ylabel('Y Label')
+    ax.set_zlabel('Z Label')
+    plt.axis('tight')
 
-	plt.show()
+    plt.show()
+
+# Transformations de la question 3d
+
+M1 = np.matrix([[0.9045, -0.3847, -0.1840, 10.0000],
+                [0.2939,  0.8750, -0.3847, 10.0000],
+                [0.3090,  0.2939,  0.9045, 10.0000],
+                [0.0000,  0.0000,  0.0000,  1.0000]])
+
+M2 = np.matrix([[0.0000, -0.2598,  0.1500, -3.0000],
+                [0.0000, -0.1500, -0.2598,  1.5000],
+                [0.3000,  0.0000,  0.0000,  0.0000],
+                [0.0000,  0.0000,  0.0000,  1.0000]])
+
+M3 = np.matrix([[ 0.7182, -1.3727, -0.5660,  1.8115],
+                [-1.9236, -4.6556, -2.5512,  0.2873],
+                [-0.6426, -1.7985, -1.6285,  0.7404],
+                [ 0.0000,  0.0000,  0.0000,  1.0000]])
+
+
