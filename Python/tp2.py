@@ -12,9 +12,14 @@ def JointHist(I, J, nbin=256):
 	"""Calcule l'histogramme conjoint de deux images de même taille (I et J)
 	en divisant leur intervalle de valeurs en 'nbin' sous-intervalles
 
-	Example
-	-------
+	Paramètres
+	----------
+	I et J: Images (2D) en format NifTi-1, jpg ou png.
+	nbin: int, optionnel. Le nombre de bins pour le calcul de
+l'histogramme. 256 par défaut.
 
+	Exemple
+	-------
 	>>> H = tp2.JointHist('../Data/I4.jpg', '../Data/J4.jpg')"""
 
 	I = ((nbin-1) * openImage(I)).astype(int)
@@ -40,6 +45,60 @@ def JointHist(I, J, nbin=256):
 			H[I[x,y], J[x,y]] += 1
 
 	return H
+
+
+def verifSommeHisto(I, J, nbin=256):
+    """Vérifie que l'histogramme conjoint de 2 images de même taille comprend
+    bien, lorsque sommé sur toutes ses bins, le nombre de pixels d'une image
+    Retourne True si la condition est vérifiée, False sinon.
+
+    Paramètres
+    ----------
+    I et J: Images (2D) en format NifTi-1, jpg ou png.
+    nbin: int, optionnel. Le nombre de bins pour le calcul de l'histogramme.
+256 par défaut.
+
+    Exemple
+    -------
+    verifSommeHisto('../Data/I1.png','../Data/J1.png')
+    """
+
+    jointHist = JointHist(I, J, nbin)
+    I = openImage(I)
+    return I.size == jointHist.sum()
+
+
+def pltJointHist(I, J, nbin=256,colorMap = 'jet', cLimFrac = [0,1]):
+    """Affiche l'histogramme conjoint des images I et J avec l'origine située
+    dans le coin inférieur gauche.
+
+    Paramètres
+    ----------
+    I et J: Images (2D) en format NifTi-1, jpg ou png.
+    nbin: int, optionnel. Le nombre de bins pour le calcul de l'histogramme.
+256 par défaut.
+    colorMap: string, optionnel. Colormap de l'histogramme affiché.
+    cLimFrac: liste 2x1, optionnelle. Spécifie les limites pour la mise à
+l'echelle de l'image dans la colormap. Se specifie en terme de fraction du min
+et du max de l'image. Défaut: [0,1].
+
+    Exemple
+    -------
+    tp2.pltJointHist('../Data/I3.jpg','../Data/J3.jpg',cLimFrac = [0,0.0005])
+    """
+
+    jointHist = JointHist(I, J, nbin)
+    mainFig = plt.figure('IMN530 - Histo conjoint')
+    mainFig.clf()
+    minMax = [jointHist.min(), jointHist.max()]
+    cLim = [a*b for a,b in zip(cLimFrac,minMax)]
+    imAxes = plt.imshow(jointHist, cmap=colorMap, clim = cLim)
+    imAxes.get_axes().invert_yaxis()
+    plt.draw()
+    plt.show(block=False)
+
+    return mainFig, imAxes
+
 
 def SSD(I, J, nbin=256):
 	"""Calcule la somme des différences au carré entre 2 images (I et J)
@@ -90,7 +149,7 @@ def IM(I, J, nbin=256):
 	Hj[:] = H.sum(1)
 
 	if H.ndim == 3:
-		Hk = np.empty(list(H.shape)) 
+		Hk = np.empty(list(H.shape))
 		Hk[:] = H.sum(2)
 		Hk[Hk == 0] = Hk.sum()
 	else:
