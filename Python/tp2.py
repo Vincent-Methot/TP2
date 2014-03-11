@@ -209,15 +209,21 @@ def similitude(s, theta, omega, phi, p, q, r):
     Transformation = np.matrix(np.diag([s, s, s, 1])) * trans_rigide(theta, omega, phi, p, q, r)
     return Transformation
 
-def translation(I, p, q):
+def translation(I, p, q, methode='linear'):
     """Retourne une nouvelle image correspondant à la translatée
-    de l'image 'I' par le vecteur t = (p, q) (p et q doivent être des float)
+    de l'image 2D 'I' par le vecteur t = (p, q) (p et q peuvent être des float)
 
-    La gestion de l'interpolation est effectuée par scipy.interpolate"""
+    La gestion de l'interpolation est effectuée par scipy.interpolate
+    methode = {'nn', 'linear', 'cubic'}
+    """
 
     I = openImage(I)
-    dimensions = ( int(ceil(I.shape[0] + abs(p))), int(ceil(I.shape[1] + abs(q))) )
-    J[p:, q:] = I
+    xi = np.mgrid[:I.shape[0], :I.shape[1]]
+    points = xi
+    points[0,...] += p
+    points[1,...] += q
+
+    J = griddata((points[0], points[1]), I, (xi[0], xi[1]), method=methode)
 
     return I, J
 
@@ -272,7 +278,7 @@ def grille_test(transformation, xmax = 10, ymax = 10, zmax = 5):
     
     Exemple:
     --------
-    tp2.grille_test([[2, 0, 0, 5.5], [0, 3, 0, 4.5], [0, 0, 1, 4.5], [0, 0, 0, 1]])"""
+    tp2.grille_test(tp2.similitude(3, 0.1, 0.3, 1.6, 15, 35, 12.5))"""
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
