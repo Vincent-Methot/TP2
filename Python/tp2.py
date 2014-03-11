@@ -4,6 +4,7 @@
 
 import numpy as np
 import nibabel as nib
+from scipy.interpolate import griddata
 import Image
 from pylab import *
 
@@ -114,6 +115,17 @@ def trans_rigide(theta, omega, phi, p, q, r):
 	phi: 		angle de rotation autour de z
 	(p, q, r): 	vecteur de translation"""
 
+	T = np.matrix([[1, 0, 0, p], [0, 1, 0, q], [0, 0, 1, r], [0, 0, 0, 1]])
+	Rx = np.matrix([[1, 0, 0, 0], [0, np.cos(theta), -np.sin(theta), 0], 
+		[0, np.sin(theta), np.cos(theta), 0], [0, 0, 0, 1]])
+	Ry = np.matrix([[np.cos(omega), 0, -np.sin(omega), 0], [0, 1, 0, 0], 
+		[np.sin(omega), 0, np.cos(omega), 0], [0, 0, 0, 1]])
+	Rz = np.matrix([[np.cos(phi), -np.sin(phi), 0, 0], [np.sin(phi), np.cos(phi), 0, 0], 
+		[0, 0, 1, 0], [0, 0, 0, 1]])
+	Transformation = T * Rz * Ry * Rx
+
+	return Transformation
+
 def similitude(s, theta, omega, phi, p, q, r):
 	"""Revoie la matrice de transformation rigide (+homothétie)
 	en coordonnées homogènes
@@ -124,11 +136,17 @@ def similitude(s, theta, omega, phi, p, q, r):
 	phi: 		angle de rotation autour de z
 	(p, q, r): 	vecteur de translation"""
 
+	Transformation = np.matrix(np.diag([s, s, s, 1])) * trans_rigide(theta, omega, phi, p, q, r)
+	return Transformation
+
 def translation(I, p, q):
 	"""Retourne une nouvelle image correspondant à la translatée
 	de l'image 'I' par le vecteur t = (p, q) (p et q doivent être des float)
 
-	La gestion de l'interpolation est effectuée par [module d'interpolation]"""
+	La gestion de l'interpolation est effectuée par scipy.interpolate"""
+
+	I = openImage(I)
+
 
 def rec2dtrans(I, J):
 	"""Recalage 2D minimisant la SSD et considérant uniquement les translations.
@@ -150,8 +168,6 @@ def rec2doptimize(I, J):
 	"""Recalage 2D minimisant la SSD par une descente de gradient optimisée.
 	Considère l'ensemble des transformations rigides."""
 
-
-
 def openImage(I):
 	"""Ouvre des images au format jpeg, png et NifTI et les retourne en numpy array.
 	Normalise et transforme en float array les autres types d'entrée (si complexe,
@@ -171,5 +187,3 @@ def openImage(I):
 	J = (J - J.min()) / (J - J.min()).max()
 
 	return J
-		
-
