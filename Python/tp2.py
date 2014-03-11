@@ -18,7 +18,7 @@ def JointHist(I, J, nbin=256):
 	----------
 	I et J: Images (2D) en format NifTi-1, jpg ou png.
 	nbin: int, optionnel. Le nombre de bins pour le calcul de
-l'histogramme. 256 par défaut.
+	l'histogramme. 256 par défaut.
 
 	Exemple
 	-------
@@ -137,7 +137,7 @@ def CR(I, J, nbins=256):
 def IM(I, J, nbin=256):
 	"""Calcule l'information mutuelle entre 2 images de même taille
 
-	Example
+	Exemple
 	-------
 
 	>>> IM = tp2.JointHist('../Data/I4.jpg', '../Data/J4.jpg')"""
@@ -175,7 +175,11 @@ def trans_rigide(theta, omega, phi, p, q, r):
 	theta: 		angle de rotation autour de x
 	omega: 		angle de rotation autour de y
 	phi: 		angle de rotation autour de z
-	(p, q, r): 	vecteur de translation"""
+	(p, q, r): 	vecteur de translation
+
+	Voir aussi
+	----------
+	gille_test: test d'une transformation à l'aide d'une grille de points"""
 
 	T = np.matrix([[1, 0, 0, p], [0, 1, 0, q], [0, 0, 1, r], [0, 0, 0, 1]])
 	Rx = np.matrix([[1, 0, 0, 0], [0, np.cos(theta), -np.sin(theta), 0], 
@@ -196,7 +200,11 @@ def similitude(s, theta, omega, phi, p, q, r):
 	theta: 		angle de rotation autour de x
 	omega: 		angle de rotation autour de y
 	phi: 		angle de rotation autour de z
-	(p, q, r): 	vecteur de translation"""
+	(p, q, r): 	vecteur de translation
+
+	Voir aussi
+	----------
+	gille_test: test d'une transformation à l'aide d'une grille de points"""
 
 	Transformation = np.matrix(np.diag([s, s, s, 1])) * trans_rigide(theta, omega, phi, p, q, r)
 	return Transformation
@@ -252,18 +260,30 @@ def openImage(I):
 
 	return J
 
-def grille_test():
+def grille_test(transformation, xmax = 10, ymax = 10, zmax = 5):
+	"""Test des transformations à l'aide d'une grille de points.
+	---------------------------------------------------------
+	transformation:		matrice de transformation 3D en coordonnées homogènes
+	xmax, ymax, zmax:	limites de la grille de point (min à 0)
+	
+	Exemple:
+	--------
+	tp2.grille_test([[2, 0, 0, 5.5], [0, 3, 0, 4.5], [0, 0, 1, 4.5], [0, 0, 0, 1]])"""
 
 	fig = plt.figure()
 	ax = fig.add_subplot(111, projection='3d')
 
-	xs, ys, zs = np.mgrid[:10,:10,:5]
-	ax.scatter(xs, ys, zs)
+	xis, yis, zis = np.mgrid[:xmax,:ymax,:zmax]
+	pis = np.matrix([xis.ravel(), yis.ravel(), zis.ravel(), ones(xis.shape).ravel()]).T
+	ax.scatter(xis, yis, zis, c='b')
+
+	pfs = pis * transformation
+	xfs, yfs, zfs, uns = array(pfs.T)
+	ax.scatter(xfs, yfs, zfs, c='r')
 
 	ax.set_xlabel('X Label')
 	ax.set_ylabel('Y Label')
 	ax.set_zlabel('Z Label')
+	plt.axis('tight')
 
 	plt.show()
-	
-	return xs, ys, zs
