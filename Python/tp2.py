@@ -71,7 +71,7 @@ def verifSommeHisto(I, J, nbin=256):
     return I.size == jointHist.sum()
 
 
-def pltJointHist(I, J, nbin=256,colorMap = 'jet', cLimFrac = [0,1]):
+def pltJointHist(I, J, nbin=256,colorMap = 'jet', cLimFrac = [0,1], useLogNorm = False):
     """Affiche l'histogramme conjoint des images I et J avec l'origine située
     dans le coin inférieur gauche.
 
@@ -84,18 +84,30 @@ def pltJointHist(I, J, nbin=256,colorMap = 'jet', cLimFrac = [0,1]):
     cLimFrac: liste 2x1, optionnelle. Spécifie les limites pour la mise à
 l'echelle de l'image dans la colormap. Se specifie en terme de fraction du min
 et du max de l'image. Défaut: [0,1].
+    useLogNorm: logical, optionnel. Si True, une échelle log est utilisée pour
+l'intensité de l'image. Défaut: False.
 
     Exemple
     -------
     tp2.pltJointHist('../Data/I3.jpg','../Data/J3.jpg',cLimFrac = [0,0.0005])
+    tp2.pltJointHist('../Data/I3.jpg','../Data/J3.jpg',useLogNorm=True)
     """
 
     jointHist = JointHist(I, J, nbin)
     mainFig = plt.figure('IMN530 - Histo conjoint')
     mainFig.clf()
     minMax = [jointHist.min(), jointHist.max()]
-    cLim = [a*b for a,b in zip(cLimFrac,minMax)]
-    imAxes = plt.imshow(jointHist, cmap=colorMap, clim = cLim)
+    customClim = [a*b for a,b in zip(cLimFrac,minMax)]
+    # Préparation de la normalisation logarithmique si demandé
+    if not useLogNorm:
+        customNorm = None
+    else:
+        if customClim[0] == 0:
+            customClim[0] = 1e-15
+        customNorm = mpc.LogNorm(vmin=customClim[0],vmax=customClim[1],clip=True)
+    # Affichage de l'image
+    imAxes = plt.imshow(jointHist, cmap=colorMap, clim = customClim,
+        norm=customNorm, interpolation="none")
     imAxes.get_axes().invert_yaxis()
     plt.draw()
     plt.show(block=False)
@@ -152,7 +164,7 @@ def IM(I, J, nbin=256):
     Hj[:] = H.sum(1)
 
     if H.ndim == 3:
-        Hk = np.empty(list(H.shape)) 
+        Hk = np.empty(list(H.shape))
         Hk[:] = H.sum(2)
         Hk[Hk == 0] = Hk.sum()
     else:
@@ -166,7 +178,7 @@ def IM(I, J, nbin=256):
     Hj[Hj == 0] = Hj.sum()
     IM = (H.astype(float) / H.sum() * log(H.sum() * H.astype(float) / (Hi * Hj * Hk))).sum()
 
-    print "Information mutuelle:", IM    
+    print "Information mutuelle:", IM
     return IM
 
 def trans_rigide(theta, omega, phi, p, q, r):
@@ -182,11 +194,11 @@ def trans_rigide(theta, omega, phi, p, q, r):
     gille_test: test d'une transformation à l'aide d'une grille de points"""
 
     T = np.matrix([[1, 0, 0, p], [0, 1, 0, q], [0, 0, 1, r], [0, 0, 0, 1]])
-    Rx = np.matrix([[1, 0, 0, 0], [0, np.cos(theta), -np.sin(theta), 0], 
+    Rx = np.matrix([[1, 0, 0, 0], [0, np.cos(theta), -np.sin(theta), 0],
         [0, np.sin(theta), np.cos(theta), 0], [0, 0, 0, 1]])
-    Ry = np.matrix([[np.cos(omega), 0, -np.sin(omega), 0], [0, 1, 0, 0], 
+    Ry = np.matrix([[np.cos(omega), 0, -np.sin(omega), 0], [0, 1, 0, 0],
         [np.sin(omega), 0, np.cos(omega), 0], [0, 0, 0, 1]])
-    Rz = np.matrix([[np.cos(phi), -np.sin(phi), 0, 0], [np.sin(phi), np.cos(phi), 0, 0], 
+    Rz = np.matrix([[np.cos(phi), -np.sin(phi), 0, 0], [np.sin(phi), np.cos(phi), 0, 0],
         [0, 0, 1, 0], [0, 0, 0, 1]])
     Transformation = T * Rz * Ry * Rx
 
@@ -225,6 +237,51 @@ def translation(I, p, q):
 def rec2dtrans(I, J):
     """Recalage 2D minimisant la SSD et considérant uniquement les translations.
     L'énergie SSD correspondant à chaque état est sauvegardée."""
+
+    # Descente de gradient à pas fixe.
+    # Paramètres hardcodé pour l'instant. À changer lorsque toutes les méthodes
+    # que nous voulons implémenter le seront.
+    pq = [0, 0]
+    grad = np.array([np.inf, np.inf])
+    smallestGrad = 1e-5
+    smallGradCpt = 0
+    smallGradCptMax = 10
+    stepSize = 1e-5
+    nIt = 1e5
+    allSsd = np.zeros(nIt)
+    allSsd[0] = SSD(I, J)
+    showEvo = False
+    print "{}{}".format("SSD actuel: ", allSsd[0])
+    for iIt in range(0, nIt - 1):
+        # Calcul de l'image translatée
+        ITrans = translation(I, pq[0], pq[1])
+        # Calcul du gradient selon p et q (vérifier la concordance avec les
+        # "x" et "y" de la fonction translation)
+        IDiff = (ITrans - J)
+        gradx, grady = np.gradient(ITrans)
+        grad[0] = 2 * np.dot(IDiff, gradx).sum()
+        grad[1] = 2 * np.dot(IDiff, grady).sum()
+        # Mise à jour du vecteur de translation.
+        pq = pq - stepSize * grad
+        # Calcul et stockage de la SSD
+        allSsd[iIt + 1] = SSD(ITrans, J)
+        print "{}{}".format("SSD actuel: ", allSsd[iIt + 1])
+        # Montrer l'évolution si demandé
+        if showEvo:
+            pltRecalage2D(ITrans, J)
+        # Incrémentation d'un compteur si le gradient est petit
+        if grad.norm() < smallestGrad:
+            smallGradCpt = smallGradCpt + 1
+        else:
+            smallGradCpt = 0
+        if smallGradCpt > smallGradCptMax:
+            break
+
+
+    return ITrans, allSsd
+
+
+
 
 def rotation(I, theta):
     """Application d'une rotation d'angle 'theta' et de centre (0, 0)
@@ -269,7 +326,7 @@ def grille_test(transformation, xmax = 10, ymax = 10, zmax = 5):
     ---------------------------------------------------------
     transformation:        matrice de transformation 3D en coordonnées homogènes
     xmax, ymax, zmax:    limites de la grille de point (min à 0)
-    
+
     Exemple:
     --------
     tp2.grille_test([[2, 0, 0, 5.5], [0, 3, 0, 4.5], [0, 0, 1, 4.5], [0, 0, 0, 1]])"""
@@ -291,6 +348,37 @@ def grille_test(transformation, xmax = 10, ymax = 10, zmax = 5):
     plt.axis('tight')
 
     plt.show()
+
+
+def pltRecalage2D(I,J):
+    """Affiche 2 images de même taille ainsi que la différence entre ces deux
+    images"""
+
+    I = openImage(I)
+    J = openImage(J)
+
+    mainFig = plt.figure("IMN530 - Recalage images 2D")
+    currAx = plt.subplot(131)
+    plt.imshow(I)
+    plt.title("Image 1")
+    currAx.xaxis.set_visible(False)
+    currAx.yaxis.set_visible(False)
+
+    currAx = plt.subplot(132)
+    plt.imshow(J)
+    plt.title("Image 2")
+    currAx.xaxis.set_visible(False)
+    currAx.yaxis.set_visible(False)
+
+    currAx = plt.subplot(133)
+    plt.imshow(np.abs(I - J))
+    plt.title("Diff abs")
+    currAx.xaxis.set_visible(False)
+    currAx.yaxis.set_visible(False)
+
+    plt.show(block=False)
+
+    return mainFig
 
 # Transformations de la question 3d
 
