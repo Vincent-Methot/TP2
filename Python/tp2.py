@@ -33,7 +33,8 @@ def JointHist(I, J, nbin=256):
     H = np.zeros([nbin, nbin], dtype=int)
     print H.shape
 
-    # À faire: s'assurer que les deux images aient les même dimensions (interpolation)
+    # À faire: s'assurer que les deux images aient les même dimensions
+    # (interpolation)
 
     # i, j = np.meshgrid(range(nbin), range(nbin))
 
@@ -52,19 +53,19 @@ def JointHist(I, J, nbin=256):
 
 
 def verifSommeHisto(I, J, nbin=256):
-    """Vérifie que l'histogramme conjoint de 2 images de même taille comprend
-    bien, lorsque sommé sur toutes ses bins, le nombre de pixels d'une image
-    Retourne True si la condition est vérifiée, False sinon.
+    """Vérifie que l'histogramme conjoint de 2 images de même taille
+    comprend bien, lorsque sommé sur toutes ses bins, le nombre de pixels
+    d'une image. Retourne True si la condition est vérifiée, False sinon.
 
     Paramètres
     ----------
     I et J: Images (2D) en format NifTi-1, jpg ou png.
     nbin: int, optionnel. Le nombre de bins pour le calcul de l'histogramme.
-256 par défaut.
+    256 par défaut.
 
     Exemple
     -------
-    verifSommeHisto('../Data/I1.png','../Data/J1.png')
+    tp2.verifSommeHisto('../Data/I1.png','../Data/J1.png')
     """
 
     jointHist = JointHist(I, J, nbin)
@@ -72,26 +73,27 @@ def verifSommeHisto(I, J, nbin=256):
     return I.size == jointHist.sum()
 
 
-def pltJointHist(I, J, nbin=256,colorMap = 'jet', cLimFrac = [0,1], useLogNorm = False):
-    """Affiche l'histogramme conjoint des images I et J avec l'origine située
-    dans le coin inférieur gauche.
+def pltJointHist(I, J, nbin=256, colorMap = 'jet', cLimFrac = [0,1], 
+    useLogNorm = False):
+    """Affiche l'histogramme conjoint des images I et J avec l'origine
+    située dans le coin inférieur gauche.
 
     Paramètres
     ----------
     I et J: Images (2D) en format NifTi-1, jpg ou png.
     nbin: int, optionnel. Le nombre de bins pour le calcul de l'histogramme.
-256 par défaut.
+    256 par défaut.
     colorMap: string, optionnel. Colormap de l'histogramme affiché.
     cLimFrac: liste 2x1, optionnelle. Spécifie les limites pour la mise à
-l'echelle de l'image dans la colormap. Se specifie en terme de fraction du min
-et du max de l'image. Défaut: [0,1].
-    useLogNorm: logical, optionnel. Si True, une échelle log est utilisée pour
-l'intensité de l'image. Défaut: False.
+    l'echelle de l'image dans la colormap. Se specifie en terme de fraction
+    du min et du max de l'image. Défaut: [0,1].
+    useLogNorm: logical, optionnel. Si True, une échelle log est utilisée
+    pour l'intensité de l'image. Défaut: False.
 
     Exemple
     -------
-    tp2.pltJointHist('../Data/I3.jpg','../Data/J3.jpg',cLimFrac = [0,0.0005])
-    tp2.pltJointHist('../Data/I3.jpg','../Data/J3.jpg',useLogNorm=True)
+    >>> tp2.pltJointHist('../Data/I3.jpg','../Data/J3.jpg', cLimFrac=[0,0.0005])
+    >>> tp2.pltJointHist('../Data/I3.jpg','../Data/J3.jpg', useLogNorm=True)
     """
 
     jointHist = JointHist(I, J, nbin)
@@ -105,7 +107,8 @@ l'intensité de l'image. Défaut: False.
     else:
         if customClim[0] == 0:
             customClim[0] = 1e-15
-        customNorm = mpc.LogNorm(vmin=customClim[0],vmax=customClim[1],clip=True)
+        customNorm = mpc.LogNorm(vmin=customClim[0],vmax=customClim[1],
+            clip=True)
     # Affichage de l'image
     imAxes = plt.imshow(jointHist, cmap=colorMap, clim = customClim,
         norm=customNorm, interpolation="none")
@@ -131,7 +134,12 @@ def SSD(I, J, nbin=256):
 
 def CR(I, J, nbins=256):
     """Calcule le coefficient de corrélation entre 2 images (I et J)
-    de même taille"""
+    de même taille
+
+    Exemple
+    -------
+
+    >>> correlation = tp2.CR('../Data/I4.jpg', '../Data/J4.jpg')"""
 
     # À partir de l'histogramme
     H = JointHist(I, J, nbin)
@@ -144,7 +152,7 @@ def CR(I, J, nbins=256):
     CR = covariance / np.sqrt(autocovI * autocovJ)
 
     # Sans histogramme
-
+    print "Information mutuelle:", CR
     return CR
 
 def IM(I, J, nbin=256):
@@ -153,7 +161,7 @@ def IM(I, J, nbin=256):
     Exemple
     -------
 
-    >>> IM = tp2.JointHist('../Data/I4.jpg', '../Data/J4.jpg')"""
+    >>> IM = tp2.IM('../Data/I4.jpg', '../Data/J4.jpg')"""
 
     # À partir de l'histogramme
     H = JointHist(I, J, nbin)
@@ -177,7 +185,8 @@ def IM(I, J, nbin=256):
     H[H == 0] = H.sum()
     Hi[Hi == 0] = Hi.sum()
     Hj[Hj == 0] = Hj.sum()
-    IM = (H.astype(float) / H.sum() * log(H.sum() * H.astype(float) / (Hi * Hj * Hk))).sum()
+    IM = (H.astype(float) / H.sum() * log(H.sum() * H.astype(float) /
+        (Hi * Hj * Hk))).sum()
 
     print "Information mutuelle:", IM
     return IM
@@ -190,6 +199,11 @@ def trans_rigide(theta, omega, phi, p, q, r):
     phi:         angle de rotation autour de z
     (p, q, r):     vecteur de translation
 
+    Exemple
+    -------
+
+    >>> tranformation = tp2.trans_rigide(0.1, 0.1, 0.1, 1, 1, 1)
+
     Voir aussi
     ----------
     gille_test: test d'une transformation à l'aide d'une grille de points"""
@@ -199,7 +213,8 @@ def trans_rigide(theta, omega, phi, p, q, r):
         [0, np.sin(theta), np.cos(theta), 0], [0, 0, 0, 1]])
     Ry = np.matrix([[np.cos(omega), 0, -np.sin(omega), 0], [0, 1, 0, 0],
         [np.sin(omega), 0, np.cos(omega), 0], [0, 0, 0, 1]])
-    Rz = np.matrix([[np.cos(phi), -np.sin(phi), 0, 0], [np.sin(phi), np.cos(phi), 0, 0],
+    Rz = np.matrix([[np.cos(phi), -np.sin(phi), 0, 0], [np.sin(phi),
+        np.cos(phi), 0, 0],
         [0, 0, 1, 0], [0, 0, 0, 1]])
     Transformation = T * Rz * Ry * Rx
 
@@ -215,11 +230,17 @@ def similitude(s, theta, omega, phi, p, q, r):
     phi:         angle de rotation autour de z
     (p, q, r):     vecteur de translation
 
+    Exemple
+    -------
+
+    >>> tranformation = tp2.similitude(2, 0.1, 0.1, 0.1, 1, 1, 1)
+
     Voir aussi
     ----------
     gille_test: test d'une transformation à l'aide d'une grille de points"""
 
-    Transformation = np.matrix(np.diag([s, s, s, 1])) * trans_rigide(theta, omega, phi, p, q, r)
+    Transformation = np.matrix(np.diag([s, s, s, 1])) * trans_rigide(theta,
+        omega, phi, p, q, r)
     return Transformation
 
 def translation(I, p, q):
@@ -229,7 +250,8 @@ def translation(I, p, q):
     La gestion de l'interpolation est effectuée par scipy.interpolate"""
 
     I = openImage(I)
-    dimensions = ( int(ceil(I.shape[0] + abs(p))), int(ceil(I.shape[1] + abs(q))) )
+    dimensions = ( int(ceil(I.shape[0] + abs(p))),
+        int(ceil(I.shape[1] + abs(q))) )
     J[p:, q:] = I
 
     return I, J
@@ -303,9 +325,9 @@ def rec2doptimize(I, J):
 
 
 def openImage(I):
-    """Ouvre des images au format jpeg, png et NifTI et les retourne en numpy array.
-    Normalise et transforme en float array les autres types d'entrée (si complexe,
-    prend la valeur absolue)"""
+    """Ouvre des images au format jpeg, png et NifTI et les retourne en numpy
+    array. Normalise et transforme en float array les autres types d'entrée
+    (si complexe, prend la valeur absolue)"""
 
     if isinstance(I, str):
         if (I[-7:] == '.nii.gz') | (I[-4:] == '.nii'):
@@ -330,13 +352,15 @@ def grille_test(transformation, xmax = 10, ymax = 10, zmax = 5):
 
     Exemple:
     --------
-    tp2.grille_test([[2, 0, 0, 5.5], [0, 3, 0, 4.5], [0, 0, 1, 4.5], [0, 0, 0, 1]])"""
+    tp2.grille_test([[2, 0, 0, 5.5], [0, 3, 0, 4.5], [0, 0, 1, 4.5],
+        [0, 0, 0, 1]])"""
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
     xis, yis, zis = np.mgrid[:xmax,:ymax,:zmax]
-    pis = np.matrix([xis.ravel(), yis.ravel(), zis.ravel(), ones(xis.shape).ravel()]).T
+    pis = np.matrix([xis.ravel(), yis.ravel(), zis.ravel(),
+        ones(xis.shape).ravel()]).T
     ax.scatter(xis, yis, zis, c='b')
 
     pfs = pis * transformation
@@ -397,5 +421,3 @@ M3 = np.matrix([[ 0.7182, -1.3727, -0.5660,  1.8115],
                 [-1.9236, -4.6556, -2.5512,  0.2873],
                 [-0.6426, -1.7985, -1.6285,  0.7404],
                 [ 0.0000,  0.0000,  0.0000,  1.0000]])
-
-
