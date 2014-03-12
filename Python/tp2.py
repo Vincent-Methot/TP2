@@ -9,6 +9,7 @@ import Image
 from pylab import *
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
+import matplotlib.colors as mpc
 
 def JointHist(I, J, nbin=256):
     """Calcule l'histogramme conjoint de deux images de même taille (I et J)
