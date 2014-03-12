@@ -344,7 +344,7 @@ def openImage(I):
 
     return J
 
-def grille_test(transformation, xmax = 10, ymax = 10, zmax = 5):
+def grille_test(transformation, xmax = 6, ymax = 6, zmax = 2):
     """Test des transformations à l'aide d'une grille de points.
     ---------------------------------------------------------
     transformation:        matrice de transformation 3D en coordonnées homogènes
@@ -352,8 +352,9 @@ def grille_test(transformation, xmax = 10, ymax = 10, zmax = 5):
 
     Exemple:
     --------
-    tp2.grille_test([[2, 0, 0, 5.5], [0, 3, 0, 4.5], [0, 0, 1, 4.5],
-        [0, 0, 0, 1]])"""
+    >>> tp2.grille_test([[2, 0, 0, 5.5], [0, 3, 0, 4.5], [0, 0, 1, 4.5],
+        [0, 0, 0, 1]])
+    >>> tp2.grille_test(tp2.M3)"""
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
