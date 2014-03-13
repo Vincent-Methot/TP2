@@ -4,7 +4,7 @@
 
 import numpy as np
 import nibabel as nib
-from scipy.interpolate import griddata
+import scipy.interpolate
 import Image
 from pylab import *
 from mpl_toolkits.mplot3d import Axes3D
@@ -247,12 +247,21 @@ def translation(I, p, q):
     """Retourne une nouvelle image correspondant à la translatée
     de l'image 'I' par le vecteur t = (p, q) (p et q doivent être des float)
 
-    La gestion de l'interpolation est effectuée par scipy.interpolate"""
+    La gestion de l'interpolation est effectuée par scipy.interpolate
+
+    Exemple
+    -------
+
+    >>> J = tp2.translation('../Data/I1.png', 4.5, 6.7)"""
 
     I = openImage(I)
-    dimensions = ( int(ceil(I.shape[0] + abs(p))),
-        int(ceil(I.shape[1] + abs(q))) )
-    J[p:, q:] = I
+    xi = np.mgrid[:I.shape[0], :I.shape[1]]
+    points = xi.astype(float)
+    points[0,...] += p
+    points[1,...] += q
+
+    J = scipy.interpolate.griddata((points[0].ravel(), points[1].ravel()),
+        I.ravel(), (xi[0], xi[1]), method='linear', fill_value=0 )
 
     return I, J
 
