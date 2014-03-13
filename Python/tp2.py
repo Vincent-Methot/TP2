@@ -9,6 +9,7 @@ import Image
 from pylab import *
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
+import matplotlib.colors as mpc
 
 def JointHist(I, J, nbin=256):
     """Calcule l'histogramme conjoint de deux images de même taille (I et J)
@@ -32,7 +33,8 @@ def JointHist(I, J, nbin=256):
     H = np.zeros([nbin, nbin], dtype=int)
     print H.shape
 
-    # À faire: s'assurer que les deux images aient les même dimensions (interpolation)
+    # À faire: s'assurer que les deux images aient les même dimensions
+    # (interpolation)
 
     # i, j = np.meshgrid(range(nbin), range(nbin))
 
@@ -51,19 +53,19 @@ def JointHist(I, J, nbin=256):
 
 
 def verifSommeHisto(I, J, nbin=256):
-    """Vérifie que l'histogramme conjoint de 2 images de même taille comprend
-    bien, lorsque sommé sur toutes ses bins, le nombre de pixels d'une image
-    Retourne True si la condition est vérifiée, False sinon.
+    """Vérifie que l'histogramme conjoint de 2 images de même taille
+    comprend bien, lorsque sommé sur toutes ses bins, le nombre de pixels
+    d'une image. Retourne True si la condition est vérifiée, False sinon.
 
     Paramètres
     ----------
     I et J: Images (2D) en format NifTi-1, jpg ou png.
     nbin: int, optionnel. Le nombre de bins pour le calcul de l'histogramme.
-256 par défaut.
+    256 par défaut.
 
     Exemple
     -------
-    verifSommeHisto('../Data/I1.png','../Data/J1.png')
+    tp2.verifSommeHisto('../Data/I1.png','../Data/J1.png')
     """
 
     jointHist = JointHist(I, J, nbin)
@@ -71,31 +73,45 @@ def verifSommeHisto(I, J, nbin=256):
     return I.size == jointHist.sum()
 
 
-def pltJointHist(I, J, nbin=256,colorMap = 'jet', cLimFrac = [0,1]):
-    """Affiche l'histogramme conjoint des images I et J avec l'origine située
-    dans le coin inférieur gauche.
+def pltJointHist(I, J, nbin=256, colorMap = 'jet', cLimFrac = [0,1], 
+    useLogNorm = False):
+    """Affiche l'histogramme conjoint des images I et J avec l'origine
+    située dans le coin inférieur gauche.
 
     Paramètres
     ----------
     I et J: Images (2D) en format NifTi-1, jpg ou png.
     nbin: int, optionnel. Le nombre de bins pour le calcul de l'histogramme.
-256 par défaut.
+    256 par défaut.
     colorMap: string, optionnel. Colormap de l'histogramme affiché.
     cLimFrac: liste 2x1, optionnelle. Spécifie les limites pour la mise à
-l'echelle de l'image dans la colormap. Se specifie en terme de fraction du min
-et du max de l'image. Défaut: [0,1].
+    l'echelle de l'image dans la colormap. Se specifie en terme de fraction
+    du min et du max de l'image. Défaut: [0,1].
+    useLogNorm: logical, optionnel. Si True, une échelle log est utilisée
+    pour l'intensité de l'image. Défaut: False.
 
     Exemple
     -------
-    tp2.pltJointHist('../Data/I3.jpg','../Data/J3.jpg',cLimFrac = [0,0.0005])
+    >>> tp2.pltJointHist('../Data/I3.jpg','../Data/J3.jpg', cLimFrac=[0,0.0005])
+    >>> tp2.pltJointHist('../Data/I3.jpg','../Data/J3.jpg', useLogNorm=True)
     """
 
     jointHist = JointHist(I, J, nbin)
     mainFig = plt.figure('IMN530 - Histo conjoint')
     mainFig.clf()
     minMax = [jointHist.min(), jointHist.max()]
-    cLim = [a*b for a,b in zip(cLimFrac,minMax)]
-    imAxes = plt.imshow(jointHist, cmap=colorMap, clim = cLim)
+    customClim = [a*b for a,b in zip(cLimFrac,minMax)]
+    # Préparation de la normalisation logarithmique si demandé
+    if not useLogNorm:
+        customNorm = None
+    else:
+        if customClim[0] == 0:
+            customClim[0] = 1e-15
+        customNorm = mpc.LogNorm(vmin=customClim[0],vmax=customClim[1],
+            clip=True)
+    # Affichage de l'image
+    imAxes = plt.imshow(jointHist, cmap=colorMap, clim = customClim,
+        norm=customNorm, interpolation="none")
     imAxes.get_axes().invert_yaxis()
     plt.draw()
     plt.show(block=False)
@@ -118,7 +134,12 @@ def SSD(I, J, nbin=256):
 
 def CR(I, J, nbins=256):
     """Calcule le coefficient de corrélation entre 2 images (I et J)
-    de même taille"""
+    de même taille
+
+    Exemple
+    -------
+
+    >>> correlation = tp2.CR('../Data/I4.jpg', '../Data/J4.jpg')"""
 
     # À partir de l'histogramme
     H = JointHist(I, J, nbin)
@@ -131,7 +152,7 @@ def CR(I, J, nbins=256):
     CR = covariance / np.sqrt(autocovI * autocovJ)
 
     # Sans histogramme
-
+    print "Information mutuelle:", CR
     return CR
 
 def IM(I, J, nbin=256):
@@ -140,7 +161,7 @@ def IM(I, J, nbin=256):
     Exemple
     -------
 
-    >>> IM = tp2.JointHist('../Data/I4.jpg', '../Data/J4.jpg')"""
+    >>> IM = tp2.IM('../Data/I4.jpg', '../Data/J4.jpg')"""
 
     # À partir de l'histogramme
     H = JointHist(I, J, nbin)
@@ -152,7 +173,7 @@ def IM(I, J, nbin=256):
     Hj[:] = H.sum(1)
 
     if H.ndim == 3:
-        Hk = np.empty(list(H.shape)) 
+        Hk = np.empty(list(H.shape))
         Hk[:] = H.sum(2)
         Hk[Hk == 0] = Hk.sum()
     else:
@@ -164,9 +185,10 @@ def IM(I, J, nbin=256):
     H[H == 0] = H.sum()
     Hi[Hi == 0] = Hi.sum()
     Hj[Hj == 0] = Hj.sum()
-    IM = (H.astype(float) / H.sum() * log(H.sum() * H.astype(float) / (Hi * Hj * Hk))).sum()
+    IM = (H.astype(float) / H.sum() * log(H.sum() * H.astype(float) /
+        (Hi * Hj * Hk))).sum()
 
-    print "Information mutuelle:", IM    
+    print "Information mutuelle:", IM
     return IM
 
 def trans_rigide(theta, omega, phi, p, q, r):
@@ -177,16 +199,22 @@ def trans_rigide(theta, omega, phi, p, q, r):
     phi:         angle de rotation autour de z
     (p, q, r):     vecteur de translation
 
+    Exemple
+    -------
+
+    >>> tranformation = tp2.trans_rigide(0.1, 0.1, 0.1, 1, 1, 1)
+
     Voir aussi
     ----------
     gille_test: test d'une transformation à l'aide d'une grille de points"""
 
     T = np.matrix([[1, 0, 0, p], [0, 1, 0, q], [0, 0, 1, r], [0, 0, 0, 1]])
-    Rx = np.matrix([[1, 0, 0, 0], [0, np.cos(theta), -np.sin(theta), 0], 
+    Rx = np.matrix([[1, 0, 0, 0], [0, np.cos(theta), -np.sin(theta), 0],
         [0, np.sin(theta), np.cos(theta), 0], [0, 0, 0, 1]])
-    Ry = np.matrix([[np.cos(omega), 0, -np.sin(omega), 0], [0, 1, 0, 0], 
+    Ry = np.matrix([[np.cos(omega), 0, -np.sin(omega), 0], [0, 1, 0, 0],
         [np.sin(omega), 0, np.cos(omega), 0], [0, 0, 0, 1]])
-    Rz = np.matrix([[np.cos(phi), -np.sin(phi), 0, 0], [np.sin(phi), np.cos(phi), 0, 0], 
+    Rz = np.matrix([[np.cos(phi), -np.sin(phi), 0, 0], [np.sin(phi),
+        np.cos(phi), 0, 0],
         [0, 0, 1, 0], [0, 0, 0, 1]])
     Transformation = T * Rz * Ry * Rx
 
@@ -202,28 +230,29 @@ def similitude(s, theta, omega, phi, p, q, r):
     phi:         angle de rotation autour de z
     (p, q, r):     vecteur de translation
 
+    Exemple
+    -------
+
+    >>> tranformation = tp2.similitude(2, 0.1, 0.1, 0.1, 1, 1, 1)
+
     Voir aussi
     ----------
     gille_test: test d'une transformation à l'aide d'une grille de points"""
 
-    Transformation = np.matrix(np.diag([s, s, s, 1])) * trans_rigide(theta, omega, phi, p, q, r)
+    Transformation = np.matrix(np.diag([s, s, s, 1])) * trans_rigide(theta,
+        omega, phi, p, q, r)
     return Transformation
 
-def translation(I, p, q, methode='linear'):
+def translation(I, p, q):
     """Retourne une nouvelle image correspondant à la translatée
-    de l'image 2D 'I' par le vecteur t = (p, q) (p et q peuvent être des float)
+    de l'image 'I' par le vecteur t = (p, q) (p et q doivent être des float)
 
-    La gestion de l'interpolation est effectuée par scipy.interpolate
-    methode = {'nn', 'linear', 'cubic'}
-    """
+    La gestion de l'interpolation est effectuée par scipy.interpolate"""
 
     I = openImage(I)
-    xi = np.mgrid[:I.shape[0], :I.shape[1]]
-    points = xi
-    points[0,...] += p
-    points[1,...] += q
-
-    J = griddata((points[0], points[1]), I, (xi[0], xi[1]), method=methode)
+    dimensions = ( int(ceil(I.shape[0] + abs(p))),
+        int(ceil(I.shape[1] + abs(q))) )
+    J[p:, q:] = I
 
     return I, J
 
@@ -231,6 +260,51 @@ def translation(I, p, q, methode='linear'):
 def rec2dtrans(I, J):
     """Recalage 2D minimisant la SSD et considérant uniquement les translations.
     L'énergie SSD correspondant à chaque état est sauvegardée."""
+
+    # Descente de gradient à pas fixe.
+    # Paramètres hardcodé pour l'instant. À changer lorsque toutes les méthodes
+    # que nous voulons implémenter le seront.
+    pq = [0, 0]
+    grad = np.array([np.inf, np.inf])
+    smallestGrad = 1e-5
+    smallGradCpt = 0
+    smallGradCptMax = 10
+    stepSize = 1e-5
+    nIt = 1e5
+    allSsd = np.zeros(nIt)
+    allSsd[0] = SSD(I, J)
+    showEvo = False
+    print "{}{}".format("SSD actuel: ", allSsd[0])
+    for iIt in range(0, nIt - 1):
+        # Calcul de l'image translatée
+        ITrans = translation(I, pq[0], pq[1])
+        # Calcul du gradient selon p et q (vérifier la concordance avec les
+        # "x" et "y" de la fonction translation)
+        IDiff = (ITrans - J)
+        gradx, grady = np.gradient(ITrans)
+        grad[0] = 2 * np.dot(IDiff, gradx).sum()
+        grad[1] = 2 * np.dot(IDiff, grady).sum()
+        # Mise à jour du vecteur de translation.
+        pq = pq - stepSize * grad
+        # Calcul et stockage de la SSD
+        allSsd[iIt + 1] = SSD(ITrans, J)
+        print "{}{}".format("SSD actuel: ", allSsd[iIt + 1])
+        # Montrer l'évolution si demandé
+        if showEvo:
+            pltRecalage2D(ITrans, J)
+        # Incrémentation d'un compteur si le gradient est petit
+        if grad.norm() < smallestGrad:
+            smallGradCpt = smallGradCpt + 1
+        else:
+            smallGradCpt = 0
+        if smallGradCpt > smallGradCptMax:
+            break
+
+
+    return ITrans, allSsd
+
+
+
 
 def rotation(I, theta):
     """Application d'une rotation d'angle 'theta' et de centre (0, 0)
@@ -251,9 +325,9 @@ def rec2doptimize(I, J):
 
 
 def openImage(I):
-    """Ouvre des images au format jpeg, png et NifTI et les retourne en numpy array.
-    Normalise et transforme en float array les autres types d'entrée (si complexe,
-    prend la valeur absolue)"""
+    """Ouvre des images au format jpeg, png et NifTI et les retourne en numpy
+    array. Normalise et transforme en float array les autres types d'entrée
+    (si complexe, prend la valeur absolue)"""
 
     if isinstance(I, str):
         if (I[-7:] == '.nii.gz') | (I[-4:] == '.nii'):
@@ -275,16 +349,18 @@ def grille_test(transformation, xmax = 10, ymax = 10, zmax = 5):
     ---------------------------------------------------------
     transformation:        matrice de transformation 3D en coordonnées homogènes
     xmax, ymax, zmax:    limites de la grille de point (min à 0)
-    
+
     Exemple:
     --------
-    tp2.grille_test(tp2.similitude(3, 0.1, 0.3, 1.6, 15, 35, 12.5))"""
+    tp2.grille_test([[2, 0, 0, 5.5], [0, 3, 0, 4.5], [0, 0, 1, 4.5],
+        [0, 0, 0, 1]])"""
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
     xis, yis, zis = np.mgrid[:xmax,:ymax,:zmax]
-    pis = np.matrix([xis.ravel(), yis.ravel(), zis.ravel(), ones(xis.shape).ravel()]).T
+    pis = np.matrix([xis.ravel(), yis.ravel(), zis.ravel(),
+        ones(xis.shape).ravel()]).T
     ax.scatter(xis, yis, zis, c='b')
 
     pfs = pis * transformation
@@ -297,6 +373,37 @@ def grille_test(transformation, xmax = 10, ymax = 10, zmax = 5):
     plt.axis('tight')
 
     plt.show()
+
+
+def pltRecalage2D(I,J):
+    """Affiche 2 images de même taille ainsi que la différence entre ces deux
+    images"""
+
+    I = openImage(I)
+    J = openImage(J)
+
+    mainFig = plt.figure("IMN530 - Recalage images 2D")
+    currAx = plt.subplot(131)
+    plt.imshow(I)
+    plt.title("Image 1")
+    currAx.xaxis.set_visible(False)
+    currAx.yaxis.set_visible(False)
+
+    currAx = plt.subplot(132)
+    plt.imshow(J)
+    plt.title("Image 2")
+    currAx.xaxis.set_visible(False)
+    currAx.yaxis.set_visible(False)
+
+    currAx = plt.subplot(133)
+    plt.imshow(np.abs(I - J))
+    plt.title("Diff abs")
+    currAx.xaxis.set_visible(False)
+    currAx.yaxis.set_visible(False)
+
+    plt.show(block=False)
+
+    return mainFig
 
 # Transformations de la question 3d
 
@@ -314,5 +421,3 @@ M3 = np.matrix([[ 0.7182, -1.3727, -0.5660,  1.8115],
                 [-1.9236, -4.6556, -2.5512,  0.2873],
                 [-0.6426, -1.7985, -1.6285,  0.7404],
                 [ 0.0000,  0.0000,  0.0000,  1.0000]])
-
-
