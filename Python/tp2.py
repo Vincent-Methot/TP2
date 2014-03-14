@@ -39,18 +39,28 @@ def JointHist(I, J, nbin=256, normIm=False):
     areImInt = (np.issubdtype(I.dtype, np.integer) &
                 np.issubdtype(J.dtype, np.integer))
     if areImInt:
+        # Tests sur le nombre de bins et le nombre de valeurs possibles dans
+        # les images.
+        maxNBytes = np.maximum(I.dtype.itemsize, J.dtype.itemsize)
+        maxNValue = 2 ** (8 * maxNBytes)
+        if nbin < maxNValue and not(normIm):
+            warnings.warn("nbin < le nombre de valeurs possibles dans au moins "
+                          "une des deux  images. Pour tracer l'histogramme, "
+                          "nous devons normaliser les images, ce qui peut "
+                          "introduire des artéfacts.")
+            normIm = True
         minNBytes = np.minimum(I.dtype.itemsize, J.dtype.itemsize)
         minNValue = 2 ** (8 * minNBytes)
-        if nbin < minNValue and not(normIm):
-            warnings.warn("Le nombre de bins entré est plus petit que le nombre\
-                            de valeurs possibles dans au moins une des deux \
-                            images. Pour tracer l'histogramme, nous devons \
-                            normaliser les iamges, ce qui peut introduire des \
-                            artéfacts.")
+        if nbin > minNValue and not(normIm):
+            warnings.warn("nbin > nombre de valeurs possibles dans au moins "
+                          "une image et aucune normalisation demandée. "
+                          "Nous allons normaliser les images, car sinon les "
+                          "bins extrêmes ne correspondront à aucune valeur "
+                          "possibles.")
             normIm = True
     elif not(normIm):
-        warnings.warn("Les images ne contiennent pas des entiers. Malgré \
-                l'option normIm entrée, nous allons donc les normaliser.")
+        warnings.warn("Les images ne contiennent pas des entiers. Malgré "
+                      "l'option normIm=False, nous allons donc les normaliser.")
         normIm = True
     if normIm:
         I = np.round(normalizeIm(I) * (nbin - 1)).astype(int)
