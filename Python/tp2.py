@@ -23,38 +23,11 @@ def JointHist(I, J, nbin=256, normIm=False):
     I et J: Images (2D) en format NifTi-1, jpg ou png.
     nbin: int, optionnel. Le nombre de bins pour le calcul de
     l'histogramme. 256 par défaut.
-    normIm: logical, optionnel. Si True, les images sont normalisées avant le
-    calcul de l'histo. Ainsi, la plus basse (haute) valeur de chaque image
-    correspond au preimer (dernier) bin. Si mis à True, peut créer des
-    artéfacts dus aux arrondissements. Défaut: False.
 
     Exemple
     -------
 
     >>> H = tp2.JointHist('../Data/I4.jpg', '../Data/J4.jpg')"""
-    # Ouverture et mises en forme des images en fonction des options entrées et
-    # du format des images
-    I = openImage(I)
-    J = openImage(J)
-    areImInt = (np.issubdtype(I.dtype, np.integer) &
-                np.issubdtype(J.dtype, np.integer))
-    if areImInt:
-        minNBytes = np.minimum(I.dtype.itemsize, J.dtype.itemsize)
-        minNValue = 2 ** (8 * minNBytes)
-        if nbin > minNValue and not(normIm):
-            warnings.warn("Le nombre de bins entré est plus grand que le nombre\
-                            de valeurs possibles dans au moins une des deux \
-                            images. Cela n'a pas vraiment de sens, mais nous \
-                            allons quand même tracer l'histogramme avec le \
-                            nombre de bins demandé en normalisant les images.")
-            normIm = True
-    elif not(normIm):
-        warnings.warn("Les images ne contiennent pas des entiers. Malgré \
-                l'option normIm entrée, nous allons donc les normaliser.")
-        normIm = True
-    if normIm:
-        I = np.round(normalizeIm(I) * (nbin - 1)).astype(int)
-        J = np.round(normalizeIm(J) * (nbin - 1)).astype(int)
 
     # Impression d'info et déclaration de l'histogramme
     print I.max(), I.min(), I.std()
@@ -65,6 +38,7 @@ def JointHist(I, J, nbin=256, normIm=False):
 
     # À faire: s'assurer que les deux images aient les même dimensions
     # (interpolation)
+
     # i, j = np.meshgrid(range(nbin), range(nbin))
 
     # Calcul de l'histogramme
@@ -74,6 +48,7 @@ def JointHist(I, J, nbin=256, normIm=False):
     #         H[i, j] = ((I == i) & (J == j)).sum()
 
     # Ne va fonctionner que pour les images 2D
+
     for x in range(I.shape[0]):
         for y in range(I.shape[1]):
             H[I[x, y], J[x, y]] += 1
@@ -123,7 +98,7 @@ l'intensité de l'image. Défaut: False.
     tp2.pltJointHist('../Data/I3.jpg','../Data/J3.jpg',useLogNorm=True)
     """
 
-    jointHist = JointHist(I, J, nbin, normIm)
+    jointHist = JointHist(I, J, nbin)
     mainFig = plt.figure('IMN530 - Histo conjoint')
     mainFig.clf()
     minMax = [jointHist.min(), jointHist.max()]
@@ -139,8 +114,6 @@ l'intensité de l'image. Défaut: False.
     imAxes = plt.imshow(jointHist, cmap=colorMap, clim = customClim,
         norm=customNorm, interpolation="none")
     imAxes.get_axes().invert_yaxis()
-    imAxes.get_axes().set_xlabel("Intensites de I")
-    imAxes.get_axes().set_ylabel("Intensites de J")
     plt.draw()
     plt.show(block=False)
 
@@ -260,7 +233,6 @@ def translation(I, p, q):
     La gestion de l'interpolation est effectuée par scipy.interpolate"""
 
     I = openImage(I)
-    I = normalizeIm(I)
     dimensions = ( int(ceil(I.shape[0] + abs(p))), int(ceil(I.shape[1] + abs(q))) )
     J[p:, q:] = I
 
@@ -340,20 +312,16 @@ def openImage(I):
 
     if isinstance(I, str):
         if (I[-7:] == '.nii.gz') | (I[-4:] == '.nii'):
-            #J = np.asarray(nib.load(I).get_data(), dtype=float)
-            J = np.asarray(nib.load(I).get_data())
+            J = np.asarray(nib.load(I).get_data(), dtype=float)
         elif (I[-4:] == '.jpg') | (I[-5:] == '.jpeg') | (I[-4:] == '.png'):
-            #J = np.asarray(Image.open(I), dtype=float)
-            J = np.asarray(Image.open(I))
+            J = np.asarray(Image.open(I), dtype=float)
         else:
             print "Formats d'image acceptés: .nii, .nii.gz, .jpg, .png, .jpeg"
     else:
-        #J = np.abs(np.asarray(I)).astype(float)
-        J = np.abs(np.asarray(I))
+        J = np.abs(np.asarray(I)).astype(float)
 
     # Normalisation de l'image
-    #if rescaleIm:
-    #    J = (J - J.min()) / (J - J.min()).max()
+    J = (J - J.min()) / (J - J.min()).max()
 
     return J
 
@@ -364,7 +332,7 @@ def normalizeIm(I):
     return (I - I.min()) / (I - I.min()).max()
 
 
-def grille_test(transformation, xmax=10, ymax=10, zmax=5):
+def grille_test(transformation, xmax = 6, ymax = 6, zmax = 2):
     """Test des transformations à l'aide d'une grille de points.
     ---------------------------------------------------------
     transformation:        matrice de transformation 3D en coordonnées homogènes
