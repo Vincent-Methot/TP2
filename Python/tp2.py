@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 # Fonctions du tp2 du cours IMN530 - H14 - Jérémie Fouquet et Vincent Méthot
 
+"""Doc string tp2"""
+
 import numpy as np
 import nibabel as nib
 from scipy.interpolate import griddata
@@ -11,8 +13,9 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import matplotlib.colors as mpc
 import warnings
-import pdb
 
+# Enlever à la fin
+import pdb
 
 def JointHist(I, J, nbin=256, normIm=False):
     """Calcule l'histogramme conjoint de deux images de même taille (I et J)
@@ -104,7 +107,7 @@ def verifSommeHisto(I, J, nbin=256):
 
     Exemple
     -------
-    verifSommeHisto('../Data/I1.png','../Data/J1.png')
+    ­>>> tp2.verifSommeHisto('../Data/I1.png','../Data/J1.png')
     """
 
     jointHist = JointHist(I, J, nbin)
@@ -129,15 +132,15 @@ l'intensité de l'image. Défaut: False.
 
     Exemple
     -------
-    tp2.pltJointHist('../Data/I3.jpg','../Data/J3.jpg',cLimFrac = [0,0.0005])
-    tp2.pltJointHist('../Data/I3.jpg','../Data/J3.jpg',useLogNorm=True)
+    ­>>> tp2.pltJointHist('../Data/I3.jpg','../Data/J3.jpg',cLimFrac = [0,0.0005])
+    ­>>> tp2.pltJointHist('../Data/I3.jpg','../Data/J3.jpg',useLogNorm=True)
     """
 
     jointHist = JointHist(I, J, nbin, normIm)
     mainFig = plt.figure('IMN530 - Histo conjoint')
     mainFig.clf()
     minMax = [jointHist.min(), jointHist.max()]
-    customClim = [a*b for a,b in zip(cLimFrac,minMax)]
+    customClim = [a * b for a, b in zip(cLimFrac, minMax)]
     # Préparation de la normalisation logarithmique si demandé
     if not useLogNorm:
         customNorm = None
@@ -184,8 +187,6 @@ def CR(I, J, nbins=256):
     autocovJ = 1. / H.sum() * (H * j**2 - meanJ**2).sum()
     CR = covariance / np.sqrt(autocovI * autocovJ)
 
-    # Sans histogramme
-
     return CR
 
 def IM(I, J, nbin=256):
@@ -218,7 +219,8 @@ def IM(I, J, nbin=256):
     H[H == 0] = H.sum()
     Hi[Hi == 0] = Hi.sum()
     Hj[Hj == 0] = Hj.sum()
-    IM = (H.astype(float) / H.sum() * log(H.sum() * H.astype(float) / (Hi * Hj * Hk))).sum()
+    IM = (H.astype(float) / H.sum() * log(H.sum() * H.astype(float) /
+        (Hi * Hj * Hk))).sum()
 
     print "Information mutuelle:", IM
     return IM
@@ -265,14 +267,23 @@ def similitude(s, theta, omega, phi, p, q, r):
 
 def translation(I, p, q):
     """Retourne une nouvelle image correspondant à la translatée
-    de l'image 'I' par le vecteur t = (p, q) (p et q doivent être des float)
+de l'image 'I' par le vecteur t = (p, q) (p et q doivent être des float)
 
-    La gestion de l'interpolation est effectuée par scipy.interpolate"""
+La gestion de l'interpolation est effectuée par scipy.interpolate
+
+Exemple
+-------
+
+>>> J = tp2.translation('../Data/I1.png', 4.5, 6.7)"""
 
     I = openImage(I)
-    I = normalizeIm(I)
-    dimensions = ( int(ceil(I.shape[0] + abs(p))), int(ceil(I.shape[1] + abs(q))) )
-    J[p:, q:] = I
+    xi = np.mgrid[:I.shape[0], :I.shape[1]]
+    points = xi.astype(float)
+    points[0,...] += p
+    points[1,...] += q
+
+    J = scipy.interpolate.griddata((points[0].ravel(), points[1].ravel()),
+        I.ravel(), (xi[0], xi[1]), method='linear', fill_value=0 )
 
     return I, J
 
@@ -319,7 +330,6 @@ def rec2dtrans(I, J):
             smallGradCpt = 0
         if smallGradCpt > smallGradCptMax:
             break
-
 
     return ITrans, allSsd
 
@@ -374,21 +384,24 @@ def normalizeIm(I):
     return (I - I.min()) / (I - I.min()).max()
 
 
-def grille_test(transformation, xmax=10, ymax=10, zmax=5):
+def grille_test(transformation, xmax = 6, ymax = 6, zmax = 2):
     """Test des transformations à l'aide d'une grille de points.
-    ---------------------------------------------------------
-    transformation:        matrice de transformation 3D en coordonnées homogènes
-    xmax, ymax, zmax:    limites de la grille de point (min à 0)
+---------------------------------------------------------
+transformation: matrice de transformation 3D en coordonnées homogènes
+xmax, ymax, zmax: limites de la grille de point (min à 0)
 
-    Exemple:
-    --------
-    tp2.grille_test([[2, 0, 0, 5.5], [0, 3, 0, 4.5], [0, 0, 1, 4.5], [0, 0, 0, 1]])"""
+Exemple:
+--------
+>>> tp2.grille_test([[2, 0, 0, 5.5], [0, 3, 0, 4.5], [0, 0, 1, 4.5],
+[0, 0, 0, 1]])
+>>> tp2.grille_test(tp2.M3)"""
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
     xis, yis, zis = np.mgrid[:xmax,:ymax,:zmax]
-    pis = np.matrix([xis.ravel(), yis.ravel(), zis.ravel(), ones(xis.shape).ravel()]).T
+    pis = np.matrix([xis.ravel(), yis.ravel(), zis.ravel(),
+        ones(xis.shape).ravel()]).T
     ax.scatter(xis, yis, zis, c='b')
 
     pfs = pis * transformation
@@ -403,7 +416,7 @@ def grille_test(transformation, xmax=10, ymax=10, zmax=5):
     plt.show()
 
 
-def pltRecalage2D(I,J):
+def pltRecalage2D(I, J):
     """Affiche 2 images de même taille ainsi que la différence entre ces deux
     images"""
 
