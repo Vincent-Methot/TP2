@@ -6,7 +6,7 @@
 
 import numpy as np
 import nibabel as nib
-from scipy.interpolate import griddata
+import scipy.interpolate as interpolation
 import Image
 from pylab import *
 from mpl_toolkits.mplot3d import Axes3D
@@ -230,7 +230,7 @@ def trans_rigide(theta, omega, phi, p, q, r):
     -------------------------------------------------------------------
     theta:         angle de rotation autour de x
     omega:         angle de rotation autour de y
-    phi:         angle de rotation autour de z
+    phi:           angle de rotation autour de z
     (p, q, r):     vecteur de translation
 
     Voir aussi
@@ -275,17 +275,21 @@ Exemple
 -------
 
 >>> J = tp2.translation('../Data/I1.png', 4.5, 6.7)"""
-
+    
     I = openImage(I)
-    xi = np.mgrid[:I.shape[0], :I.shape[1]]
-    points = xi.astype(float)
-    points[0,...] += p
-    points[1,...] += q
+    translation = np.matrix([[1, 0, p], [0, 1, q], [0, 0, 1]])
 
-    J = scipy.interpolate.griddata((points[0].ravel(), points[1].ravel()),
-        I.ravel(), (xi[0], xi[1]), method='linear', fill_value=0 )
+    # Création d'une grille de points en coordonnées homogène 2D
+    xi, yi = np.mgrid[:I.shape[0], :I.shape[1]]
+    pointsInitiaux = np.matrix([xi.ravel(), yi.ravel(), ones(xi.shape).ravel()])
 
-    return I, J
+    pointsFinaux = translation * pointsInitiaux
+
+    J = interpolation.griddata(pointsFinaux[:-1].T, I.ravel(),
+        pointsInitiaux[:-1].T, method='linear', fill_value=0 )
+    J.resize(I.shape)
+    
+    return J
 
 
 def rec2dtrans(I, J):
