@@ -41,12 +41,12 @@ def JointHist(I, J, nbin=256, normIm=False):
     if areImInt:
         minNBytes = np.minimum(I.dtype.itemsize, J.dtype.itemsize)
         minNValue = 2 ** (8 * minNBytes)
-        if nbin > minNValue and not(normIm):
-            warnings.warn("Le nombre de bins entré est plus grand que le nombre\
+        if nbin < minNValue and not(normIm):
+            warnings.warn("Le nombre de bins entré est plus petit que le nombre\
                             de valeurs possibles dans au moins une des deux \
-                            images. Cela n'a pas vraiment de sens, mais nous \
-                            allons quand même tracer l'histogramme avec le \
-                            nombre de bins demandé en normalisant les images.")
+                            images. Pour tracer l'histogramme, nous devons \
+                            normaliser les iamges, ce qui peut introduire des \
+                            artéfacts.")
             normIm = True
     elif not(normIm):
         warnings.warn("Les images ne contiennent pas des entiers. Malgré \
@@ -139,8 +139,8 @@ l'intensité de l'image. Défaut: False.
     imAxes = plt.imshow(jointHist, cmap=colorMap, clim = customClim,
         norm=customNorm, interpolation="none")
     imAxes.get_axes().invert_yaxis()
-    imAxes.get_axes().set_xlabel("Intensites de I")
-    imAxes.get_axes().set_ylabel("Intensites de J")
+    imAxes.get_axes().set_xlabel("Intensites de J")
+    imAxes.get_axes().set_ylabel("Intensites de I")
     plt.draw()
     plt.show(block=False)
 
