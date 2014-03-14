@@ -267,14 +267,14 @@ def similitude(s, theta, omega, phi, p, q, r):
 
 def translation(I, p, q):
     """Retourne une nouvelle image correspondant à la translatée
-de l'image 'I' par le vecteur t = (p, q) (p et q doivent être des float)
+    de l'image 'I' par le vecteur t = (p, q) (p et q doivent être des float)
 
-La gestion de l'interpolation est effectuée par scipy.interpolate
+    La gestion de l'interpolation est effectuée par scipy.interpolate
 
-Exemple
--------
+    Exemple
+    -------
 
->>> J = tp2.translation('../Data/I1.png', 4.5, 6.7)"""
+    >>> J = tp2.translation('../Data/I1.png', 4.5, 6.7)"""
     
     I = openImage(I)
     translation = np.matrix([[1, 0, p], [0, 1, q], [0, 0, 1]])
@@ -288,7 +288,7 @@ Exemple
     J = interpolation.griddata(pointsFinaux[:-1].T, I.ravel(),
         pointsInitiaux[:-1].T, method='linear', fill_value=0 )
     J.resize(I.shape)
-    
+
     return J
 
 
@@ -338,11 +338,32 @@ def rec2dtrans(I, J):
     return ITrans, allSsd
 
 
-
-
 def rotation(I, theta):
     """Application d'une rotation d'angle 'theta' et de centre (0, 0)
-    (coin supérieur gauche) à l'image 'I'"""
+    (coin supérieur gauche) à l'image 'I'
+
+    La gestion de l'interpolation est effectuée par scipy.interpolate
+
+    Exemple
+    -------
+
+    >>> J = tp2.rotation('../Data/I1.png', 0.12)"""
+    
+    I = openImage(I)
+    rotation = np.matrix([[np.cos(theta), -np.sin(theta), 0],
+        [np.sin(theta), np.cos(theta), 0], [0, 0, 1]])
+    # Création d'une grille de points en coordonnées homogène 2D
+    xi, yi = np.mgrid[:I.shape[0], :I.shape[1]]
+    pointsInitiaux = np.matrix([xi.ravel(), yi.ravel(), ones(xi.shape).ravel()])
+
+    pointsFinaux = rotation * pointsInitiaux
+
+    J = interpolation.griddata(pointsFinaux[:-1].T, I.ravel(),
+        pointsInitiaux[:-1].T, method='linear', fill_value=0 )
+    J.resize(I.shape)
+
+    return J
+
 
 def rec2drot(I, J):
     """Recalage 2D minimisant la SSD et considérant uniquement les rotations.
@@ -355,7 +376,6 @@ def rec2dpasfixe(I, J):
 def rec2doptimize(I, J):
     """Recalage 2D minimisant la SSD par une descente de gradient optimisée.
     Considère l'ensemble des transformations rigides."""
-
 
 
 def openImage(I):
