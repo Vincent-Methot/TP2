@@ -1,8 +1,9 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-# Fonctions du tp2 du cours IMN530 - H14 - Jérémie Fouquet et Vincent Méthot
 
-"""Doc string tp2"""
+"""Module regroupant les fonctions du tp2 d'IMN530 à l'hiver 2014, par
+Jérémie Fouquet et Vincent Méthot. Le projet complet est disponiblque sur
+https://github.com/Vincent-Methot/TP2"""
 
 import numpy as np
 import nibabel as nib
@@ -17,6 +18,36 @@ import time
 
 # Enlever à la fin
 import pdb
+
+
+def openImage(I):
+    """Ouvre des images au format jpeg, png et NifTI et les retourne en numpy
+    array. (si complexe, prend la valeur absolue)"""
+
+    if isinstance(I, str):
+        if (I[-7:] == '.nii.gz') | (I[-4:] == '.nii'):
+            #J = np.asarray(nib.load(I).get_data(), dtype=float)
+            J = np.asarray(nib.load(I).get_data())
+        elif (I[-4:] == '.jpg') | (I[-5:] == '.jpeg') | (I[-4:] == '.png'):
+            #J = np.asarray(Image.open(I), dtype=float)
+            J = np.asarray(Image.open(I))
+        else:
+            print "Formats d'image acceptés: .nii, .nii.gz, .jpg, .png, .jpeg"
+    else:
+        #J = np.abs(np.asarray(I)).astype(float)
+        J = np.abs(np.asarray(I))
+
+    # Normalisation de l'image
+    #if rescaleIm:
+    #    J = (J - J.min()) / (J - J.min()).max()
+
+    return J
+
+
+def normalizeIm(I):
+    """ Transforme une image en float et rescale ses valeurs entre 0 et 1.'"""
+    I = I.astype(float)
+    return (I - I.min()) / (I - I.min()).max()
 
 def JointHist(I, J, nbin=256, normIm=False):
     """Calcule l'histogramme conjoint de deux images de même taille (I et J)
@@ -299,8 +330,84 @@ def similitude(s, theta, omega, phi, p, q, r):
     return Transformation
 
 
+def trans_rigide_2D(I, p, q, theta):
+    """Application d'une rotation d'angle 'theta' (en radians) et de 
+    centre (0, 0) (coin supérieur gauche) et d'une translation de
+    coordonnée (p, q) à l'image 'I'. La gestion de l'interpolation est
+    effectuée par scipy.interpolate.
+
+    Paramètres
+    ----------
+    I :     Image (2D) en format NifTi-1, jpg, png, ou ndarray.
+    p :     flottant. Translation dans la direction verticale.
+    q :     flottant. Translation dans la direction horizontale.
+    theta : angle de rotation (anti-horaire) en radians
+
+    Retour
+    ------
+    J : Image I ayant subit une translation de (p, q) et une rotation theta.
+
+    Exemple
+    -------
+    >>> J = tp2.trans_rigide_2D('../Data/I1.png', 0.1, 5, 5)"""
+
+    I = openImage(I)
+    transformation = np.matrix([[np.cos(theta), -np.sin(theta), p],
+        [np.sin(theta), np.cos(theta), q], [0, 0, 1]])
+
+    # Création d'une grille de points en coordonnées homogène 2D
+    xi, yi = np.mgrid[:I.shape[0], :I.shape[1]]
+    pointsInitiaux = np.matrix([xi.ravel(), yi.ravel(), ones(xi.shape).ravel()])
+
+    pointsFinaux = transformation * pointsInitiaux
+
+    J = scipy.interpolate.griddata(pointsFinaux[:-1].T, I.ravel(),
+        pointsInitiaux[:-1].T, method='linear', fill_value=0)
+    J.resize(I.shape)
+
+    return J
+
+
+def rotation(I, theta):
+    """Application d'une rotation d'angle 'theta' (en radians)
+    et de centre (0, 0) (coin supérieur gauche) à l'image 'I'.
+    Utilise la fonction trans_rigide_2D.
+
+    Exemple
+    -------
+
+    >>> J = tp2.rotation('../Data/I1.png', 0.12)
+
+    Voir aussi
+    ----------
+    trans_rigide_2D: Effectue une rotation et une translation sur une image"""
+
+    J = trans_rigide_2D(I, 0, 0, theta)
+
+    return J
+
+
+def translation(I, p, q):
+    """Retourne une nouvelle image correspondant à la translatée de l'image
+    'I' par le vecteur t = (p, q) (p et q doivent être des float).
+    La gestion de l'interpolation est effectuée par scipy.interpolate.
+    Utilise la fonction trans_rigide_2D.
+
+    Exemple
+    -------
+    >>> J = tp2.translation('../Data/I1.png', 4.5, 6.7)
+
+    Voir aussi
+    ----------
+    trans_rigide_2D: Effectue une rotation et une translation sur une image"""
+
+    J = trans_rigide_2D(I, p, q, 0)
+
+    return J
+
+
 def rec2dtrans(I, J, stepSize=1e-7, pqConstCptMax=10, minDeltaPq=0.01,
-               nItMax=10000, showEvo=False):
+               nItMax=10000, showEvo=True):
     """Recalage 2D minimisant la SSD grâce à une descente de gradient à pas
     fixe en considérant uniquement les translations. L'énergie SSD
     correspondant à chaque état est sauvegardée. L'image I est translatée pour
@@ -308,25 +415,23 @@ def rec2dtrans(I, J, stepSize=1e-7, pqConstCptMax=10, minDeltaPq=0.01,
 
     Paramètres
     ----------
-    I, J: Images (2D) en format NifTi-1, jpg, png, ou ndarray.
-    stepSize: float, optionnel. Pas de gradient constant.
+    I, J:            Images (2D) en format NifTi-1, jpg, png, ou ndarray.
+    stepSize:        float, optionnel. Pas de gradient constant.
     smallGradCptMax: int, optionnel. Si la norme du gradient < constante
-    déterminée à partir de stepSize pendant smallGradCptMax itérations, la
-    descente s'arrete.'
-    nItMax: int, optionnel. Nombre maximal d'itérations effectuées
-    showEvo: logical, optionnel. Si True, l'évolution de l'image modifiée est
-    montrée sur une figure.
+                     déterminée à partir de stepSize pendant smallGradCptMax
+                     itérations, la descente s'arrete.
+    nItMax:          int, optionnel. Nombre maximal d'itérations effectuées
+    showEvo:         logique, optionnel. Si True, l'évolution de l'image
+                     modifiée est montrée sur une figure.
 
     Retour
     ------
     ITrans: Image I translatée recalée (du moins en théorie) avec J
-    allSsd: ndarray,
+    allSsd: ndarray, SSD calculées à chaque pas du recalage
 
     Exemple
     -------
-    ­>>> tp2.rec2dtrans("../Data/BrainMRI_1.jpg", "../Data/BrainMRI_2.jpg",
-        showEvo=True)
-    """
+    ­>>> tp2.rec2dtrans("../Data/BrainMRI_1.jpg", "../Data/BrainMRI_2.jpg")"""
 
     # Descente de gradient à pas fixe.
     I = openImage(I)
@@ -490,82 +595,6 @@ def rec2drot(I, J, stepSize=5e-12, aConstCptMax=10, minDeltaA=0.001,
     return actualA, IRot, allSsd
 
 
-def trans_rigide_2D(I, p, q, theta):
-    """Application d'une rotation d'angle 'theta' (en radians) et de 
-    centre (0, 0) (coin supérieur gauche) et d'une translation de
-    coordonnée (p, q) à l'image 'I'. La gestion de l'interpolation est
-    effectuée par scipy.interpolate.
-
-    Paramètres
-    ----------
-    I :     Image (2D) en format NifTi-1, jpg, png, ou ndarray.
-    p :     flottant. Translation dans la direction verticale.
-    q :     flottant. Translation dans la direction horizontale.
-    theta : angle de rotation (anti-horaire) en radians
-
-    Retour
-    ------
-    J : Image I ayant subit une translation de (p, q) et une rotation theta.
-
-    Exemple
-    -------
-    >>> J = tp2.trans_rigide_2D('../Data/I1.png', 0.1, 5, 5)"""
-
-    I = openImage(I)
-    transformation = np.matrix([[np.cos(theta), -np.sin(theta), p],
-        [np.sin(theta), np.cos(theta), q], [0, 0, 1]])
-
-    # Création d'une grille de points en coordonnées homogène 2D
-    xi, yi = np.mgrid[:I.shape[0], :I.shape[1]]
-    pointsInitiaux = np.matrix([xi.ravel(), yi.ravel(), ones(xi.shape).ravel()])
-
-    pointsFinaux = transformation * pointsInitiaux
-
-    J = scipy.interpolate.griddata(pointsFinaux[:-1].T, I.ravel(),
-        pointsInitiaux[:-1].T, method='linear', fill_value=0)
-    J.resize(I.shape)
-
-    return J
-
-
-def rotation(I, theta):
-    """Application d'une rotation d'angle 'theta' (en radians)
-    et de centre (0, 0) (coin supérieur gauche) à l'image 'I'.
-    Utilise la fonction trans_rigide_2D.
-
-    Exemple
-    -------
-
-    >>> J = tp2.rotation('../Data/I1.png', 0.12)
-
-    Voir aussi
-    ----------
-    trans_rigide_2D: Effectue une rotation et une translation sur une image"""
-
-    J = trans_rigide_2D(I, 0, 0, theta)
-
-    return J
-
-
-def translation(I, p, q):
-    """Retourne une nouvelle image correspondant à la translatée de l'image
-    'I' par le vecteur t = (p, q) (p et q doivent être des float).
-    La gestion de l'interpolation est effectuée par scipy.interpolate.
-    Utilise la fonction trans_rigide_2D.
-
-    Exemple
-    -------
-    >>> J = tp2.translation('../Data/I1.png', 4.5, 6.7)
-
-    Voir aussi
-    ----------
-    trans_rigide_2D: Effectue une rotation et une translation sur une image"""
-
-    J = trans_rigide_2D(I, p, q, 0)
-
-    return J
-
-
 def rec2dpasfixe(I, J, stepSize=[1e-7, 1e-7, 1e-12], pqaConstCptMax=10,
                  minDeltaPq = 0.01, minDeltaA=0.001, nItMax=10000, showEvo=False):
     """Recalage 2D minimisant la SSD par une descente de gradient.
@@ -655,37 +684,6 @@ def rec2doptimize(I, J):
     Considère l'ensemble des transformations rigides."""
 
 
-
-def openImage(I):
-    """Ouvre des images au format jpeg, png et NifTI et les retourne en numpy
-    array. (si complexe, prend la valeur absolue)"""
-
-    if isinstance(I, str):
-        if (I[-7:] == '.nii.gz') | (I[-4:] == '.nii'):
-            #J = np.asarray(nib.load(I).get_data(), dtype=float)
-            J = np.asarray(nib.load(I).get_data())
-        elif (I[-4:] == '.jpg') | (I[-5:] == '.jpeg') | (I[-4:] == '.png'):
-            #J = np.asarray(Image.open(I), dtype=float)
-            J = np.asarray(Image.open(I))
-        else:
-            print "Formats d'image acceptés: .nii, .nii.gz, .jpg, .png, .jpeg"
-    else:
-        #J = np.abs(np.asarray(I)).astype(float)
-        J = np.abs(np.asarray(I))
-
-    # Normalisation de l'image
-    #if rescaleIm:
-    #    J = (J - J.min()) / (J - J.min()).max()
-
-    return J
-
-
-def normalizeIm(I):
-    """ Transforme une image en float et rescale ses valeurs entre 0 et 1.'"""
-    I = I.astype(float)
-    return (I - I.min()) / (I - I.min()).max()
-
-
 def grille_test(transformation, xmax = 6, ymax = 6, zmax = 2):
     """Test des transformations à l'aide d'une grille de points.
 ---------------------------------------------------------
@@ -720,7 +718,11 @@ Exemple:
 
 def pltRecalage2D(I, J):
     """Affiche 2 images de même taille ainsi que la différence entre ces deux
-    images"""
+    images
+
+    Exemple
+    -------
+    >>> tp2.pltRecalage2D('../Data/I1.png', '../Data/J1.png')"""
 
     I = openImage(I)
     J = openImage(J)
@@ -753,7 +755,7 @@ def pltRecalage2D(I, J):
 def num4b(stepSize=1e-7, pqConstCptMax=10, minDeltaPq=0.01, nItMax=10000,
           showEvo=False):
     """Fonction qui teste rec2dtrans pour 3 translations aléatoires différentes
-    pour répondre à la question 4.b. du tp.
+    pour répondre à la question 4.b. du tp2.
 
     Paramètres
     ----------
@@ -789,7 +791,7 @@ def num4b(stepSize=1e-7, pqConstCptMax=10, minDeltaPq=0.01, nItMax=10000,
 def num4d(stepSize=4e-12, aConstCptMax=10, minDeltaA=0.001, nItMax=10000,
           showEvo=True):
     """Fonction qui teste rec2drot pour 3 rotations aléatoires différentes
-    pour répondre à la question 4.d. du tp.
+    pour répondre à la question 4.d. du tp2.
 
     Paramètres
     ----------
@@ -821,9 +823,6 @@ def num4d(stepSize=4e-12, aConstCptMax=10, minDeltaA=0.001, nItMax=10000,
     return regA, initA, allSsd
 
 
-
-
-
 # Transformations de la question 3d
 
 M1 = np.matrix([[0.9045, -0.3847, -0.1840, 10.0000],
@@ -840,5 +839,3 @@ M3 = np.matrix([[ 0.7182, -1.3727, -0.5660,  1.8115],
                 [-1.9236, -4.6556, -2.5512,  0.2873],
                 [-0.6426, -1.7985, -1.6285,  0.7404],
                 [ 0.0000,  0.0000,  0.0000,  1.0000]])
-
-
