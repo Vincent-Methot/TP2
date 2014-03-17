@@ -487,7 +487,7 @@ def rec2drot(I, J, stepSize=1e-7, aConstCptMax=10, minDeltaA=0.001,
     return pq, ITrans, allSsd
 
 def rotation(I, theta):
-    """Application d'une rotation d'angle 'theta' (en radians) 
+    """Application d'une rotation d'angle 'theta' (en radians)
     et de centre (0, 0) (coin supérieur gauche) à l'image 'I'
 
     La gestion de l'interpolation est effectuée par scipy.interpolate
@@ -496,7 +496,7 @@ def rotation(I, theta):
     -------
 
     >>> J = tp2.rotation('../Data/I1.png', 0.12)"""
-    
+
     I = openImage(I)
     rotation = np.matrix([[np.cos(theta), -np.sin(theta), 0],
         [np.sin(theta), np.cos(theta), 0], [0, 0, 1]])
@@ -514,7 +514,7 @@ def rotation(I, theta):
     return J
 
 def trans_rigide_2D(I, theta, p, q):
-    """Application d'une rotation d'angle 'theta' (en radians) 
+    """Application d'une rotation d'angle 'theta' (en radians)
     et de centre (0, 0) (coin supérieur gauche) et d'une translation de
     coordonnée (p, q) à l'image 'I'
 
@@ -524,7 +524,7 @@ def trans_rigide_2D(I, theta, p, q):
     -------
 
     >>> J = tp2.trans_rigide_2D('../Data/I1.png', 0.1, 5, 5)"""
-    
+
     I = openImage(I)
     transformation = np.matrix([[np.cos(theta), -np.sin(theta), p],
         [np.sin(theta), np.cos(theta), q], [0, 0, 1]])
@@ -543,10 +543,6 @@ def trans_rigide_2D(I, theta, p, q):
 
     return J
 
-
-def rec2drot(I, J):
-    """Recalage 2D minimisant la SSD et considérant uniquement les rotations.
-    L'énergie SSD correspondant à chaque état est sauvegardée."""
 
 def rec2dpasfixe(I, J):
     """Recalage 2D minimisant la SSD par une descente de gradient.
