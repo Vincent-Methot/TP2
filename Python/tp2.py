@@ -6,13 +6,14 @@
 
 import numpy as np
 import nibabel as nib
-from scipy.interpolate import griddata
+import scipy.interpolate
 import Image
 from pylab import *
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import matplotlib.colors as mpc
 import warnings
+import time
 
 # Enlever à la fin
 import pdb
@@ -65,6 +66,8 @@ def JointHist(I, J, nbin=256, normIm=False):
         warnings.warn("Les images ne contiennent pas des entiers. Malgré "
                       "l'option normIm=False, nous allons donc les normaliser.")
         normIm = True
+
+#
     if normIm:
         I = np.round(normalizeIm(I) * (nbin - 1)).astype(int)
         J = np.round(normalizeIm(J) * (nbin - 1)).astype(int)
@@ -99,7 +102,7 @@ def verifSommeHisto(I, J, nbin=256):
     bien, lorsque sommé sur toutes ses bins, le nombre de pixels d'une image
     Retourne True si la condition est vérifiée, False sinon.
 
-    Paramètres
+    Paramètresimport griddata
     ----------
     I et J: Images (2D) en format NifTi-1, jpg ou png.
     nbin: int, optionnel. Le nombre de bins pour le calcul de l'histogramme.
@@ -152,8 +155,9 @@ l'intensité de l'image. Défaut: False.
     imAxes = plt.imshow(jointHist, cmap=colorMap, clim = customClim,
         norm=customNorm, interpolation="none")
     imAxes.get_axes().invert_yaxis()
-    imAxes.get_axes().set_xlabel("Intensites de J")
-    imAxes.get_axes().set_ylabel("Intensites de I")
+    #imAxes.get_axes().set_xlabel("Intensites de J")
+    #imAxes.get_axes().set_ylabel("Intensites de I")
+    plt.colorbar()
     plt.draw()
     plt.show(block=False)
 
@@ -285,51 +289,94 @@ Exemple
     J = scipy.interpolate.griddata((points[0].ravel(), points[1].ravel()),
         I.ravel(), (xi[0], xi[1]), method='linear', fill_value=0 )
 
-    return I, J
+    return J
 
 
-def rec2dtrans(I, J):
-    """Recalage 2D minimisant la SSD et considérant uniquement les translations.
-    L'énergie SSD correspondant à chaque état est sauvegardée."""
+def rec2dtrans(I, J, stepSize=1e-7, smallGradCptMax=10, nItMax=10000,
+               showEvo=False):
+    """Recalage 2D minimisant la SSD grâce à une descente de gradient à pas
+    fixe en considérant uniquement les translations. L'énergie SSD
+    correspondant à chaque état est sauvegardée. L'image I est translatée pour
+    correspondre à l'image J.
+
+    Paramètres
+    ----------
+    I, J: Images (2D) en format NifTi-1, jpg, png, ou ndarray.
+    stepSize: float, optionnel. Pas de gradient constant.
+    smallGradCptMax: int, optionnel. Si la norme du gradient < constante
+    déterminée à partir de stepSize pendant smallGradCptMax itérations, la
+    descente s'arrete.'
+    nItMax: int, optionnel. Nombre maximal d'itérations effectuées
+    showEvo: logical, optionnel. Si True, l'évolution de l'image modifiée est
+    montrée sur une figure.
+
+    Retour
+    ------
+    ITrans: Image I translatée recalée (du moins en théorie) avec J
+    allSsd: ndarray,
+
+    Exemple
+    -------
+    ­>>> tp2.rec2dtrans("../Data/BrainMRI_1.jpg", "../Data/BrainMRI_2.jpg",
+        showEvo=True)
+    """
 
     # Descente de gradient à pas fixe.
-    # Paramètres hardcodé pour l'instant. À changer lorsque toutes les méthodes
-    # que nous voulons implémenter le seront.
+    I = openImage(I)
+    J = openImage(J)
     pq = [0, 0]
     grad = np.array([np.inf, np.inf])
-    smallestGrad = 1e-5
-    smallGradCpt = 0
-    smallGradCptMax = 10
-    stepSize = 1e-5
-    nIt = 1e5
-    allSsd = np.zeros(nIt)
+    # Constantes pour la condition d'arret. (si norm(grad) < smallestGrad,pour
+    # smallGradCptMax fois de suite, la fonction est arretée. Si nIt sont
+    # faites, la fonction est aussi arretée, mais avec un warning.)
+    smallestGrad = 1 / stepSize / 1e4  # Déterminé empiriquement pour l'instant
+    smallGradCpt = 0  # Initialisation du compteur
+
+    # Array pour stocker les SSD
+    allSsd = np.zeros(nItMax + 1)
     allSsd[0] = SSD(I, J)
-    showEvo = False
     print "{}{}".format("SSD actuel: ", allSsd[0])
-    for iIt in range(0, nIt - 1):
+
+    for iIt in range(0, nItMax):
         # Calcul de l'image translatée
         ITrans = translation(I, pq[0], pq[1])
         # Calcul du gradient selon p et q (vérifier la concordance avec les
         # "x" et "y" de la fonction translation)
         IDiff = (ITrans - J)
-        gradx, grady = np.gradient(ITrans)
-        grad[0] = 2 * np.dot(IDiff, gradx).sum()
-        grad[1] = 2 * np.dot(IDiff, grady).sum()
+
+        gradDim0, gradDim1 = np.gradient(ITrans)
+        grad[0] = -2 * (IDiff * gradDim0).sum()
+        grad[1] = -2 * (IDiff * gradDim1).sum()
+
         # Mise à jour du vecteur de translation.
         pq = pq - stepSize * grad
+        print "{}{}".format("grad = ", grad)
+        print "{}{}".format("[p,q] = ", pq)
         # Calcul et stockage de la SSD
         allSsd[iIt + 1] = SSD(ITrans, J)
         print "{}{}".format("SSD actuel: ", allSsd[iIt + 1])
         # Montrer l'évolution si demandé
         if showEvo:
             pltRecalage2D(ITrans, J)
+            time.sleep(0.05)
+        # Condition d'arret.
         # Incrémentation d'un compteur si le gradient est petit
-        if grad.norm() < smallestGrad:
+        if np.linalg.norm(grad) < smallestGrad:
             smallGradCpt = smallGradCpt + 1
         else:
             smallGradCpt = 0
         if smallGradCpt > smallGradCptMax:
+            convReached = True
             break
+
+    # Afficher un warning si la fonction s'est arretée en raison du nombre d'it
+    # max
+    if not(convReached):
+        warnings.warn("Le recalage s'est arreté car le nombre d'itérations max"
+                      " a été atteint. Le recalage peut ne pas etre optimal.")
+    # Élmination des 0 à la fin de allSsd
+    allSsd = np.delete(allSsd, range(np.minimum(iIt + 2, nItMax + 1),
+                                                nItMax + 1))
 
     return ITrans, allSsd
 
@@ -442,9 +489,13 @@ def pltRecalage2D(I, J):
     currAx.xaxis.set_visible(False)
     currAx.yaxis.set_visible(False)
 
+    plt.draw()
     plt.show(block=False)
 
     return mainFig
+
+
+def num3b(stepSize=1e-7, smallGradCptMax=10, nItMax=10000, showEvo=True):
 
 # Transformations de la question 3d
 
