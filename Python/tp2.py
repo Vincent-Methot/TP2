@@ -220,37 +220,39 @@ def CR(I, J, nbins=256):
 def IM(I, J, nbin=256):
     """Calcule l'information mutuelle entre 2 images de même taille
 
+    Paramètres
+    ----------
+    I et J: array. Images (2D) en format NifTi-1, jpg ou png.
+    nbin:   int, optionnel. Le nombre de bins pour le calcul de
+            l'histogramme. 256 par défaut.
+
+    Retour
+    ------
+    IM : int. Information mutuelle entre I et J
+
     Exemple
     -------
+    >>> IM = tp2.IM('../Data/I4.jpg', '../Data/J4.jpg')"""
 
-    >>> IM = tp2.JointHist('../Data/I4.jpg', '../Data/J4.jpg')"""
-
-    # À partir de l'histogramme
+    # Définition de P_{ij}
     H = JointHist(I, J, nbin)
+    H = H.astype(float)/H.sum()
 
-    # Broadcasting!
+    # Définition de P_i et P_j par broadcasting
     Hi = np.empty(list(H.shape))
     Hj = np.empty(list(H.shape))
     Hi[:] = H.sum(0)
     Hj[:] = H.sum(1)
 
-    if H.ndim == 3:
-        Hk = np.empty(list(H.shape))
-        Hk[:] = H.sum(2)
-        Hk[Hk == 0] = Hk.sum()
-    else:
-        Hk = 1
+    # On remplace les 0 par des 1 dans l'histogramme. Ceci permet de se
+    # débarasser de la divergence du log de 0 et des divisions par 0.
+    H[H == 0] = 1
+    Hi[Hi == 0] = 1
+    Hj[Hj == 0] = 1
 
-    # On remplace les 0 par des 1 dans l'histogramme
-    # Il reste plein de choses à optimiser...
+    # Calcul de l'information mutuelle
+    IM = (H * log(H / (Hi * Hj))).sum()
 
-    H[H == 0] = H.sum()
-    Hi[Hi == 0] = Hi.sum()
-    Hj[Hj == 0] = Hj.sum()
-    IM = (H.astype(float) / H.sum() * log(H.sum() * H.astype(float) /
-        (Hi * Hj * Hk))).sum()
-
-    print "Information mutuelle:", IM
     return IM
 
 def trans_rigide(theta, omega, phi, p, q, r):
