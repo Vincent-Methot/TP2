@@ -24,22 +24,30 @@ def JointHist(I, J, nbin=256, normIm=False):
 
     Paramètres
     ----------
-    I et J: Images (2D) en format NifTi-1, jpg ou png.
-    nbin: int, optionnel. Le nombre de bins pour le calcul de
-    l'histogramme. 256 par défaut.
-    normIm: logical, optionnel. Si True, les images sont normalisées avant le
-    calcul de l'histo. Ainsi, la plus basse (haute) valeur de chaque image
-    correspond au preimer (dernier) bin. Si mis à True, peut créer des
-    artéfacts dus aux arrondissements. Défaut: False.
+    I et J: array. Images (2D) en format NifTi-1, jpg ou png.
+    nbin:   int, optionnel. Le nombre de bins pour le calcul de
+            l'histogramme. 256 par défaut.
+    normIm: logique, optionnel. Si True, les images sont normalisées avant
+            le calcul de l'histogramme. Ainsi, la plus basse (haute) valeur
+            de chaque image correspond au preimer (dernier) bin. Si mis à 
+            True, peut créer des artéfacts dus aux arrondissements.
+            Défaut: False.
+
+    Retour
+    ------
+    H : 2d array. Histogramme conjoint des images I et J
 
     Exemple
     -------
-
     >>> H = tp2.JointHist('../Data/I4.jpg', '../Data/J4.jpg')"""
+
     # Ouverture et mises en forme des images en fonction des options entrées et
     # du format des images
+
     I = openImage(I)
     J = openImage(J)
+
+    # Gestion de la normalisation des images
     areImInt = (np.issubdtype(I.dtype, np.integer) &
                 np.issubdtype(J.dtype, np.integer))
     if areImInt:
@@ -67,29 +75,12 @@ def JointHist(I, J, nbin=256, normIm=False):
                       "l'option normIm=False, nous allons donc les normaliser.")
         normIm = True
 
-#
     if normIm:
         I = np.round(normalizeIm(I) * (nbin - 1)).astype(int)
         J = np.round(normalizeIm(J) * (nbin - 1)).astype(int)
 
-    # Impression d'info et déclaration de l'histogramme
-    print I.max(), I.min(), I.std()
-    print J.max(), J.min(), J.std()
+    # Calcul de l'histogramme conjoint
     H = np.zeros([nbin, nbin], dtype=int)
-    print H.shape
-
-
-    # À faire: s'assurer que les deux images aient les même dimensions
-    # (interpolation)
-    # i, j = np.meshgrid(range(nbin), range(nbin))
-
-    # Calcul de l'histogramme
-    # Pas efficace
-    # for i in range(nbin):
-    #     for j in range(nbin):
-    #         H[i, j] = ((I == i) & (J == j)).sum()
-
-    # Ne va fonctionner que pour les images 2D
     for x in range(I.shape[0]):
         for y in range(I.shape[1]):
             H[I[x, y], J[x, y]] += 1
