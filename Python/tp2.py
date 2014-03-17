@@ -299,31 +299,6 @@ def similitude(s, theta, omega, phi, p, q, r):
     return Transformation
 
 
-def translation(I, p, q, interpMeth="linear"):
-    """Retourne une nouvelle image correspondant à la translatée de l'image
-    'I' par le vecteur t = (p, q) (p et q doivent être des float). La gestion
-    de l'interpolation est effectuée par scipy.interpolate
-
-    Exemple
-    -------
-    >>> J = tp2.translation('../Data/I1.png', 4.5, 6.7)
-
-    Voir aussi
-    ----------
-    trans_rigide_2D: Effectue une rotation et une translation sur une image"""
-
-    I = openImage(I)
-    xi = np.mgrid[:I.shape[0], :I.shape[1]]
-    points = xi.astype(float)
-    points[0,...] += p
-    points[1,...] += q
-
-    J = scipy.interpolate.griddata((points[0].ravel(), points[1].ravel()),
-        I.ravel(), (xi[0], xi[1]), method=interpMeth, fill_value=0)
-
-    return J
-
-
 def rec2dtrans(I, J, stepSize=1e-7, pqConstCptMax=10, minDeltaPq=0.01,
                nItMax=10000, showEvo=False):
     """Recalage 2D minimisant la SSD grâce à une descente de gradient à pas
@@ -515,34 +490,6 @@ def rec2drot(I, J, stepSize=5e-12, aConstCptMax=10, minDeltaA=0.001,
     return actualA, IRot, allSsd
 
 
-def rotation(I, theta):
-    """Application d'une rotation d'angle 'theta' (en radians)
-    et de centre (0, 0) (coin supérieur gauche) à l'image 'I'
-
-    La gestion de l'interpolation est effectuée par scipy.interpolate
-
-    Exemple
-    -------
-
-    >>> J = tp2.rotation('../Data/I1.png', 0.12)"""
-
-    I = openImage(I)
-    rotation = np.matrix([[np.cos(theta), -np.sin(theta), 0],
-        [np.sin(theta), np.cos(theta), 0], [0, 0, 1]])
-
-    # Création d'une grille de points en coordonnées homogène 2D
-    xi, yi = np.mgrid[:I.shape[0], :I.shape[1]]
-    pointsInitiaux = np.matrix([xi.ravel(), yi.ravel(), ones(xi.shape).ravel()])
-
-    pointsFinaux = rotation * pointsInitiaux
-
-    J = scipy.interpolate.griddata(pointsFinaux[:-1].T, I.ravel(),
-        pointsInitiaux[:-1].T, method='linear', fill_value=0)
-    J.resize(I.shape)
-
-    return J
-
-
 def trans_rigide_2D(I, p, q, theta):
     """Application d'une rotation d'angle 'theta' (en radians) et de 
     centre (0, 0) (coin supérieur gauche) et d'une translation de
@@ -577,6 +524,44 @@ def trans_rigide_2D(I, p, q, theta):
     J = scipy.interpolate.griddata(pointsFinaux[:-1].T, I.ravel(),
         pointsInitiaux[:-1].T, method='linear', fill_value=0)
     J.resize(I.shape)
+
+    return J
+
+
+def rotation(I, theta):
+    """Application d'une rotation d'angle 'theta' (en radians)
+    et de centre (0, 0) (coin supérieur gauche) à l'image 'I'.
+    Utilise la fonction trans_rigide_2D.
+
+    Exemple
+    -------
+
+    >>> J = tp2.rotation('../Data/I1.png', 0.12)
+
+    Voir aussi
+    ----------
+    trans_rigide_2D: Effectue une rotation et une translation sur une image"""
+
+    J = trans_rigide_2D(I, 0, 0, theta)
+
+    return J
+
+
+def translation(I, p, q):
+    """Retourne une nouvelle image correspondant à la translatée de l'image
+    'I' par le vecteur t = (p, q) (p et q doivent être des float).
+    La gestion de l'interpolation est effectuée par scipy.interpolate.
+    Utilise la fonction trans_rigide_2D.
+
+    Exemple
+    -------
+    >>> J = tp2.translation('../Data/I1.png', 4.5, 6.7)
+
+    Voir aussi
+    ----------
+    trans_rigide_2D: Effectue une rotation et une translation sur une image"""
+
+    J = trans_rigide_2D(I, p, q, 0)
 
     return J
 
