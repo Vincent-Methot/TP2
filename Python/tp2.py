@@ -153,19 +153,31 @@ def pltJointHist(I, J, nbin=256, normIm=False, colorMap = 'jet', cLimFrac = [0,1
     plt.draw()
     plt.show(block=False)
 
-    return mainFig, imAxes
+    return mainFig, imAxess
 
 
 def SSD(I, J, nbin=256):
     """Calcule la somme des différences au carré entre 2 images (I et J)
-    de même taille"""
+    de même taille.
 
-    # À partir de l'histogramme
+    Paramètres
+    ----------
+    I et J: array. Images (2D) en format NifTi-1, jpg ou png.
+    nbin:   int, optionnel. Le nombre de bins pour le calcul de
+            l'histogramme. 256 par défaut.
+
+    Retour
+    ------
+    SSD : 2d array. Histogramme conjoint des images I et J
+
+    Exemple
+    -------
+    >>> SSD = tp2.SSD('../Data/I4.jpg', '../Data/J4.jpg')"""
+
+    # Calcul de la SSD à partir de l'histogramme conjoint
     H = JointHist(I, J, nbin)
     i, j = np.meshgrid(range(nbin), range(nbin))
     SSD = (H*(i - j)**2).sum()
-
-    # Sans histogramme
 
     return SSD
 
