@@ -212,7 +212,7 @@ def SSD(I, J, nbin=256):
 
     return SSD
 
-def CR(I, J, nbins=256):
+def CR(I, J, nbin=256):
     """Calcule le coefficient de corrélation entre 2 images (I et J)
     de même taille
 
