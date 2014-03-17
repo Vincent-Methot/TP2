@@ -1,1 +1,13 @@
 TP1 du cours IMN530 - H14 - par Jérémie Fouquet et Vincent Méthot
+
+Pour corriger et tester les fonctions du tp il est recommendé de faire:
+
+$ cd TP2/Python
+$ ipython
+>>> import tp2
+>>> tp2.fonction_à_tester?
+
+Toutes les fonctions comportent une aide pour les utiliser et un exemple
+de syntaxe.
+
+Enjoy :-)
