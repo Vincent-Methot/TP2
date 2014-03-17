@@ -168,7 +168,7 @@ def SSD(I, J, nbin=256):
 
     Retour
     ------
-    SSD : 2d array. Histogramme conjoint des images I et J
+    SSD : int. Somme des différences au carré entre I et J
 
     Exemple
     -------
@@ -183,16 +183,36 @@ def SSD(I, J, nbin=256):
 
 def CR(I, J, nbins=256):
     """Calcule le coefficient de corrélation entre 2 images (I et J)
-    de même taille"""
+    de même taille
 
-    # À partir de l'histogramme
+    Paramètres
+    ----------
+    I et J: array. Images (2D) en format NifTi-1, jpg ou png.
+    nbin:   int, optionnel. Le nombre de bins pour le calcul de
+            l'histogramme. 256 par défaut.
+
+    Retour
+    ------
+    CR : int. Coefficient de corrélation entre I et J
+    
+    Exemple
+    -------
+    >>> CR = tp2.CR('../Data/I4.jpg', '../Data/J4.jpg')"""
+
+    # Calcul de l'histogramme conjoint de I et J
     H = JointHist(I, J, nbin)
     i, j = np.meshgrid(range(nbin), range(nbin))
+
+    # Calcul des valeurs moyennes de chaque image à partir de l'histogramme
     meanI = 1. / H.sum() * (H * i).sum()
     meanJ = 1. / H.sum() * (H * j).sum()
+
+    # Calcul des covariances (I-I, I-J et J-J)
     covariance = (H * (i - meanI) * (j - meanJ)).sum()
     autocovI = 1. / H.sum() * (H * i**2 - meanI**2).sum()
     autocovJ = 1. / H.sum() * (H * j**2 - meanJ**2).sum()
+
+    # Calcul du coefficient de corrélation à partir des covariances
     CR = covariance / np.sqrt(autocovI * autocovJ)
 
     return CR
