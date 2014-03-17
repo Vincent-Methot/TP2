@@ -96,8 +96,8 @@ def verifSommeHisto(I, J, nbin=256):
     Paramètres
     ----------
     I et J: Images (2D) en format NifTi-1, jpg ou png.
-    nbin: int, optionnel. Le nombre de bins pour le calcul de l'histogramme.
-256 par défaut.
+    nbin:   int, optionnel. Le nombre de bins pour le calcul de l'histogramme.
+            256 par défaut.
 
     Exemple
     -------
@@ -106,6 +106,7 @@ def verifSommeHisto(I, J, nbin=256):
 
     jointHist = JointHist(I, J, nbin)
     I = openImage(I)
+
     return I.size == jointHist.sum()
 
 
@@ -116,13 +117,13 @@ def pltJointHist(I, J, nbin=256, normIm=False, colorMap = 'jet', cLimFrac = [0,1
     Paramètres
     ----------
     I, J, nbin et normIm: paramètres passés directement, dans cet ordre, à
-    JointHist. Voir l'aide de JointHist pour plus d'info.
+                          JointHist. Voir l'aide de JointHist pour plus d'info.
     colorMap: string, optionnel. Colormap de l'histogramme affiché.
-    cLimFrac: liste 2x1, optionnelle. Spécifie les limites pour la mise à
-l'echelle de l'image dans la colormap. Se specifie en terme de fraction du min
-et du max de l'image. Défaut: [0,1].
-    useLogNorm: logical, optionnel. Si True, une échelle log est utilisée pour
-l'intensité de l'image. Défaut: False.
+    cLimFrac:   liste 2x1, optionnelle. Spécifie les limites pour la mise à
+                l'echelle de l'image dans la colormap. Se specifie en terme de
+                fraction du min et du max de l'image. Défaut: [0,1].
+    useLogNorm: logique, optionnel. Si True, une échelle log est utilisée pour
+                l'intensité de l'image. Défaut: False.
 
     Exemple
     -------
@@ -131,10 +132,11 @@ l'intensité de l'image. Défaut: False.
     """
 
     jointHist = JointHist(I, J, nbin, normIm)
-    mainFig = plt.figure('IMN530 - Histo conjoint')
+    mainFig = plt.figure('IMN530 - Histogramme conjoint')
     mainFig.clf()
     minMax = [jointHist.min(), jointHist.max()]
     customClim = [a * b for a, b in zip(cLimFrac, minMax)]
+
     # Préparation de la normalisation logarithmique si demandé
     if not useLogNorm:
         customNorm = None
@@ -142,12 +144,11 @@ l'intensité de l'image. Défaut: False.
         if customClim[0] == 0:
             customClim[0] = 1e-15
         customNorm = mpc.LogNorm(vmin=customClim[0],vmax=customClim[1],clip=True)
+    
     # Affichage de l'image
     imAxes = plt.imshow(jointHist, cmap=colorMap, clim = customClim,
         norm=customNorm, interpolation="none")
     imAxes.get_axes().invert_yaxis()
-    #imAxes.get_axes().set_xlabel("Intensites de J")
-    #imAxes.get_axes().set_ylabel("Intensites de I")
     plt.colorbar()
     plt.draw()
     plt.show(block=False)
