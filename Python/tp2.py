@@ -257,11 +257,13 @@ def IM(I, J, nbin=256):
 
 def trans_rigide(theta, omega, phi, p, q, r):
     """Renvoie la matrice de transformation rigide en coordonnées homogènes
-    -------------------------------------------------------------------
-    theta:         angle de rotation autour de x
-    omega:         angle de rotation autour de y
-    phi:           angle de rotation autour de z
-    (p, q, r):     vecteur de translation
+    
+    Paramètres
+    ----------
+    theta:     angle de rotation autour de x
+    omega:     angle de rotation autour de y
+    phi:       angle de rotation autour de z
+    (p, q, r): vecteur de translation
 
     Voir aussi
     ----------
@@ -281,12 +283,13 @@ def trans_rigide(theta, omega, phi, p, q, r):
 def similitude(s, theta, omega, phi, p, q, r):
     """Revoie la matrice de transformation rigide (+homothétie)
     en coordonnées homogènes
-    -------------------------------------------------------------------
-    s:             rapport de l'homothétie
-    theta:         angle de rotation autour de x
-    omega:         angle de rotation autour de y
-    phi:         angle de rotation autour de z
-    (p, q, r):     vecteur de translation
+    
+    Paramètres
+    ----------
+    theta:     angle de rotation autour de x
+    omega:     angle de rotation autour de y
+    phi:       angle de rotation autour de z
+    (p, q, r): vecteur de translation
 
     Voir aussi
     ----------
@@ -295,16 +298,19 @@ def similitude(s, theta, omega, phi, p, q, r):
     Transformation = np.matrix(np.diag([s, s, s, 1])) * trans_rigide(theta, omega, phi, p, q, r)
     return Transformation
 
+
 def translation(I, p, q, interpMeth="linear"):
-    """Retourne une nouvelle image correspondant à la translatée
-de l'image 'I' par le vecteur t = (p, q) (p et q doivent être des float)
+    """Retourne une nouvelle image correspondant à la translatée de l'image
+    'I' par le vecteur t = (p, q) (p et q doivent être des float). La gestion
+    de l'interpolation est effectuée par scipy.interpolate
 
-La gestion de l'interpolation est effectuée par scipy.interpolate
+    Exemple
+    -------
+    >>> J = tp2.translation('../Data/I1.png', 4.5, 6.7)
 
-Exemple
--------
-
->>> J = tp2.translation('../Data/I1.png', 4.5, 6.7)"""
+    Voir aussi
+    ----------
+    trans_rigide_2D: Effectue une rotation et une translation sur une image"""
 
     I = openImage(I)
     xi = np.mgrid[:I.shape[0], :I.shape[1]]
@@ -418,7 +424,7 @@ def rec2dtrans(I, J, stepSize=1e-7, pqConstCptMax=10, minDeltaPq=0.01,
 
 
 def rec2drot(I, J, stepSize=5e-12, aConstCptMax=10, minDeltaA=0.001,
-             nItMax=10000, showEvo=False):
+             nItMax=10000, showEvo=True):
     """Recalage 2D minimisant la SSD grâce à une descente de gradient à pas
     fixe en considérant uniquement les rotations. L'énergie SSD
     correspondant à chaque état est sauvegardée. L'image I est translatée pour
@@ -442,9 +448,7 @@ def rec2drot(I, J, stepSize=5e-12, aConstCptMax=10, minDeltaA=0.001,
 
     Exemple
     -------
-    ­>>> tp2.rec2drot("../Data/BrainMRI_1.jpg", "../Data/BrainMRI_3.jpg",
-        showEvo=True)
-    """
+    ­>>> tp2.rec2drot("../Data/BrainMRI_1.jpg", "../Data/BrainMRI_3.jpg")"""
 
     # Descente de gradient à pas fixe.
     I = openImage(I)
@@ -540,15 +544,24 @@ def rotation(I, theta):
 
 
 def trans_rigide_2D(I, p, q, theta):
-    """Application d'une rotation d'angle 'theta' (en radians)
-    et de centre (0, 0) (coin supérieur gauche) et d'une translation de
-    coordonnée (p, q) à l'image 'I'
+    """Application d'une rotation d'angle 'theta' (en radians) et de 
+    centre (0, 0) (coin supérieur gauche) et d'une translation de
+    coordonnée (p, q) à l'image 'I'. La gestion de l'interpolation est
+    effectuée par scipy.interpolate.
 
-    La gestion de l'interpolation est effectuée par scipy.interpolate
+    Paramètres
+    ----------
+    I :     Image (2D) en format NifTi-1, jpg, png, ou ndarray.
+    p :     flottant. Translation dans la direction verticale.
+    q :     flottant. Translation dans la direction horizontale.
+    theta : angle de rotation (anti-horaire) en radians
+
+    Retour
+    ------
+    J : Image I ayant subit une translation de (p, q) et une rotation theta.
 
     Exemple
     -------
-
     >>> J = tp2.trans_rigide_2D('../Data/I1.png', 0.1, 5, 5)"""
 
     I = openImage(I)
@@ -564,8 +577,6 @@ def trans_rigide_2D(I, p, q, theta):
     J = scipy.interpolate.griddata(pointsFinaux[:-1].T, I.ravel(),
         pointsInitiaux[:-1].T, method='linear', fill_value=0)
     J.resize(I.shape)
-
-    imshow(I + J, 'gray')
 
     return J
 
