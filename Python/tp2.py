@@ -6,13 +6,14 @@
 
 import numpy as np
 import nibabel as nib
-import scipy.interpolate as interpolation
+import scipy.interpolate
 import Image
 from pylab import *
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import matplotlib.colors as mpc
 import warnings
+import time
 
 # Enlever à la fin
 import pdb
@@ -65,6 +66,8 @@ def JointHist(I, J, nbin=256, normIm=False):
         warnings.warn("Les images ne contiennent pas des entiers. Malgré "
                       "l'option normIm=False, nous allons donc les normaliser.")
         normIm = True
+
+#
     if normIm:
         I = np.round(normalizeIm(I) * (nbin - 1)).astype(int)
         J = np.round(normalizeIm(J) * (nbin - 1)).astype(int)
@@ -152,8 +155,9 @@ l'intensité de l'image. Défaut: False.
     imAxes = plt.imshow(jointHist, cmap=colorMap, clim = customClim,
         norm=customNorm, interpolation="none")
     imAxes.get_axes().invert_yaxis()
-    imAxes.get_axes().set_xlabel("Intensites de J")
-    imAxes.get_axes().set_ylabel("Intensites de I")
+    #imAxes.get_axes().set_xlabel("Intensites de J")
+    #imAxes.get_axes().set_ylabel("Intensites de I")
+    plt.colorbar()
     plt.draw()
     plt.show(block=False)
 
@@ -265,82 +269,224 @@ def similitude(s, theta, omega, phi, p, q, r):
     Transformation = np.matrix(np.diag([s, s, s, 1])) * trans_rigide(theta, omega, phi, p, q, r)
     return Transformation
 
-def translation(I, p, q):
+def translation(I, p, q, interpMeth="linear"):
     """Retourne une nouvelle image correspondant à la translatée
-    de l'image 'I' par le vecteur t = (p, q) (p et q doivent être des float)
+de l'image 'I' par le vecteur t = (p, q) (p et q doivent être des float)
 
-    La gestion de l'interpolation est effectuée par scipy.interpolate
+La gestion de l'interpolation est effectuée par scipy.interpolate
 
-    Exemple
-    -------
+Exemple
+-------
 
-    >>> J = tp2.translation('../Data/I1.png', 4.5, 6.7)"""
-    
+>>> J = tp2.translation('../Data/I1.png', 4.5, 6.7)"""
+
     I = openImage(I)
-    translation = np.matrix([[1, 0, p], [0, 1, q], [0, 0, 1]])
+    xi = np.mgrid[:I.shape[0], :I.shape[1]]
+    points = xi.astype(float)
+    points[0,...] += p
+    points[1,...] += q
 
-    # Création d'une grille de points en coordonnées homogène 2D
-
-    xi, yi = np.mgrid[:I.shape[0], :I.shape[1]]
-    pointsInitiaux = np.matrix([xi.ravel(), yi.ravel(), ones(xi.shape).ravel()])
-
-    pointsFinaux = translation * pointsInitiaux
-
-    J = interpolation.griddata(pointsFinaux[:-1].T, I.ravel(),
-        pointsInitiaux[:-1].T, method='linear', fill_value=0 )
-    J.resize(I.shape)
+    J = scipy.interpolate.griddata((points[0].ravel(), points[1].ravel()),
+        I.ravel(), (xi[0], xi[1]), method=interpMeth, fill_value=0)
 
     return J
 
 
-def rec2dtrans(I, J):
-    """Recalage 2D minimisant la SSD et considérant uniquement les translations.
-    L'énergie SSD correspondant à chaque état est sauvegardée."""
+def rec2dtrans(I, J, stepSize=1e-7, pqConstCptMax=10, minDeltaPq=0.01,
+               nItMax=10000, showEvo=False):
+    """Recalage 2D minimisant la SSD grâce à une descente de gradient à pas
+    fixe en considérant uniquement les translations. L'énergie SSD
+    correspondant à chaque état est sauvegardée. L'image I est translatée pour
+    correspondre à l'image J.
+
+    Paramètres
+    ----------
+    I, J: Images (2D) en format NifTi-1, jpg, png, ou ndarray.
+    stepSize: float, optionnel. Pas de gradient constant.
+    smallGradCptMax: int, optionnel. Si la norme du gradient < constante
+    déterminée à partir de stepSize pendant smallGradCptMax itérations, la
+    descente s'arrete.'
+    nItMax: int, optionnel. Nombre maximal d'itérations effectuées
+    showEvo: logical, optionnel. Si True, l'évolution de l'image modifiée est
+    montrée sur une figure.
+
+    Retour
+    ------
+    ITrans: Image I translatée recalée (du moins en théorie) avec J
+    allSsd: ndarray,
+
+    Exemple
+    -------
+    ­>>> tp2.rec2dtrans("../Data/BrainMRI_1.jpg", "../Data/BrainMRI_2.jpg",
+        showEvo=True)
+    """
 
     # Descente de gradient à pas fixe.
-    # Paramètres hardcodé pour l'instant. À changer lorsque toutes les méthodes
-    # que nous voulons implémenter le seront.
-    pq = [0, 0]
+    I = openImage(I)
+    J = openImage(J)
+    prevPq = np.array([0, 0])
     grad = np.array([np.inf, np.inf])
-    smallestGrad = 1e-5
-    smallGradCpt = 0
-    smallGradCptMax = 10
-    stepSize = 1e-5
-    nIt = 1e5
-    allSsd = np.zeros(nIt)
-    allSsd[0] = SSD(I, J)
-    showEvo = False
-    print "{}{}".format("SSD actuel: ", allSsd[0])
-    for iIt in range(0, nIt - 1):
+    # Constantes pour la condition d'arret.
+    pqConstCpt = 0
+
+    # (si norm(grad) < smallestGrad,pour
+    # smallGradCptMax fois de suite, la fonction est arretée. Si nIt sont
+    # faites, la fonction est aussi arretée, mais avec un warning.)
+    #smallestGrad = stepSize * 1e11  # Déterminé empiriquement pour l'instant
+    #smallGradCpt = 0  # Initialisation du compteur
+
+    # Array pour stocker les SSD
+    allSsd = np.zeros(nItMax)
+
+    for iIt in range(0, nItMax):
         # Calcul de l'image translatée
-        ITrans = translation(I, pq[0], pq[1])
+        ITrans = translation(I, prevPq[0], prevPq[1])
         # Calcul du gradient selon p et q (vérifier la concordance avec les
         # "x" et "y" de la fonction translation)
         IDiff = (ITrans - J)
-        gradx, grady = np.gradient(ITrans)
-        grad[0] = 2 * np.dot(IDiff, gradx).sum()
-        grad[1] = 2 * np.dot(IDiff, grady).sum()
+
+        gradDim0, gradDim1 = np.gradient(ITrans)
+        grad[0] = -2 * (IDiff * gradDim0).sum()
+        grad[1] = -2 * (IDiff * gradDim1).sum()
+
         # Mise à jour du vecteur de translation.
-        pq = pq - stepSize * grad
+        actualPq = prevPq - stepSize * grad
+        print "{}{}".format("grad = ", grad)
+        print "{}{}".format("[p,q] = ", prevPq)
         # Calcul et stockage de la SSD
-        allSsd[iIt + 1] = SSD(ITrans, J)
-        print "{}{}".format("SSD actuel: ", allSsd[iIt + 1])
+        allSsd[iIt] = SSD(ITrans, J)
+        print "{}{}".format("SSD actuel: ", allSsd[iIt])
         # Montrer l'évolution si demandé
         if showEvo:
             pltRecalage2D(ITrans, J)
-        # Incrémentation d'un compteur si le gradient est petit
-        if grad.norm() < smallestGrad:
-            smallGradCpt = smallGradCpt + 1
+            time.sleep(0.05)
+        # Condition d'arret.
+        # Incrementation d'un compteur si le vecteur translation ne change pas
+        # plus qu'à une précision de minDeltaPq pixel.
+        if np.linalg.norm(actualPq - prevPq) < minDeltaPq:
+            pqConstCpt += 1
         else:
-            smallGradCpt = 0
-        if smallGradCpt > smallGradCptMax:
+            pqConstCpt = 0
+        if pqConstCpt > pqConstCptMax:
+            convReached = True
             break
+        prevPq = actualPq
+        # Incrémentation d'un compteur si le gradient est petit
+        #if np.linalg.norm(grad) < smallestGrad:
+            #smallGradCpt = smallGradCpt + 1
+        #else:
+            #smallGradCpt = 0
+        #if smallGradCpt > smallGradCptMax:
+            #convReached = True
+            #break
 
-    return ITrans, allSsd
+    # Afficher un warning si la fonction s'est arretée en raison du nombre d'it
+    # max
+    if not(convReached):
+        warnings.warn("Le recalage s'est arreté car le nombre d'itérations max"
+                      " a été atteint. Le recalage peut ne pas etre optimal.")
+    # Élmination des 0 à la fin de allSsd
+    allSsd = np.delete(allSsd, range(np.minimum(iIt + 1, nItMax), nItMax))
+
+    return actualPq, ITrans, allSsd
+
+
+def rec2drot(I, J, stepSize=5e-12, aConstCptMax=10, minDeltaA=0.001,
+             nItMax=10000, showEvo=False):
+    """Recalage 2D minimisant la SSD grâce à une descente de gradient à pas
+    fixe en considérant uniquement les rotations. L'énergie SSD
+    correspondant à chaque état est sauvegardée. L'image I est translatée pour
+    correspondre à l'image J.
+
+    Paramètres
+    ----------
+    I, J: Images (2D) en format NifTi-1, jpg, png, ou ndarray.
+    stepSize: float, optionnel. Pas de gradient constant.
+    smallGradCptMax: int, optionnel. Si la norme du gradient < constante
+    déterminée à partir de stepSize pendant smallGradCptMax itérations, la
+    descente s'arrete.'
+    nItMax: int, optionnel. Nombre maximal d'itérations effectuées
+    showEvo: logical, optionnel. Si True, l'évolution de l'image modifiée est
+    montrée sur une figure.
+
+    Retour
+    ------
+    ITrans: Image I rotatée recalée (du moins en théorie) avec J
+    allSsd: ndarray,
+
+    Exemple
+    -------
+    ­>>> tp2.rec2drot("../Data/BrainMRI_1.jpg", "../Data/BrainMRI_3.jpg",
+        showEvo=True)
+    """
+
+    # Descente de gradient à pas fixe.
+    I = openImage(I)
+    J = openImage(J)
+    prevA = 0
+    grad = np.inf
+    # Constantes pour la condition d'arret.
+    aConstCpt = 0
+    # (si norm(grad) < smallestGrad,pour
+    # smallGradCptMax fois de suite, la fonction est arretée. Si nIt sont
+    # faites, la fonction est aussi arretée, mais avec un warning.)
+    #smallestGrad = stepSize * 1e11  # Déterminé empiriquement pour l'instant
+    #smallGradCpt = 0  # Initialisation du compteur
+
+    # Array pour stocker les SSD
+    allSsd = np.zeros(nItMax)
+
+    for iIt in range(0, nItMax):
+        # Calcul de l'image translatée
+        IRot = rotation(I, prevA)
+        # Calcul du gradient selon a
+        IDiff = (IRot - J)
+        coord = np.mgrid[:J.shape[0], :J.shape[1]]
+        gradDim0, gradDim1 = np.gradient(IRot)
+        IDeriv = gradDim0 * (-np.sin(prevA) * coord[0, ...]
+                             - np.cos(prevA) * coord[1, ...]) \
+                 + gradDim1 * (np.cos(prevA) * coord[0, ...]
+                               - np.sin(prevA) * coord[1, ...])
+        grad = -2 * (IDiff * IDeriv).sum()
+
+        # Mise à jour de l'angle de rotation.
+        actualA = prevA - stepSize * grad
+        print "{}{}".format("grad = ", grad)
+        print "{}{}".format("theta = ", actualA)
+        # Calcul et stockage de la SSD
+        allSsd[iIt] = SSD(IRot, J)
+        print "{}{}".format("SSD actuel: ", allSsd[iIt])
+        # Montrer l'évolution si demandé
+        if showEvo:
+            pltRecalage2D(IRot, J)
+            time.sleep(0.05)
+        # Condition d'arret.
+        # Incrementation d'un compteur si l'angle ne change pas
+        # plus qu'à une précision de minDeltaA pixel.
+        if np.abs(actualA - prevA) < minDeltaA:
+            aConstCpt += 1
+        else:
+            aConstCpt = 0
+        if aConstCpt > aConstCptMax:
+            convReached = True
+            break
+        prevA = actualA
+    # Afficher quelque chose à la sortie de la boucle
+    print "Sortie de la boucle de recalage."
+    # Afficher un warning si la fonction s'est arretée en raison du nombre d'it
+    # max
+    if not(convReached):
+        warnings.warn("Le recalage s'est arreté car le nombre d'itérations max"
+                      " a été atteint. Le recalage peut ne pas etre optimal.")
+    # Élmination des 0 à la fin de allSsd
+    allSsd = np.delete(allSsd, range(np.minimum(iIt + 1, nItMax),
+                                                nItMax))
+
+    return actualA, IRot, allSsd
 
 
 def rotation(I, theta):
-    """Application d'une rotation d'angle 'theta' (en radians) 
+    """Application d'une rotation d'angle 'theta' (en radians)
     et de centre (0, 0) (coin supérieur gauche) à l'image 'I'
 
     La gestion de l'interpolation est effectuée par scipy.interpolate
@@ -349,7 +495,7 @@ def rotation(I, theta):
     -------
 
     >>> J = tp2.rotation('../Data/I1.png', 0.12)"""
-    
+
     I = openImage(I)
     rotation = np.matrix([[np.cos(theta), -np.sin(theta), 0],
         [np.sin(theta), np.cos(theta), 0], [0, 0, 1]])
@@ -360,14 +506,15 @@ def rotation(I, theta):
 
     pointsFinaux = rotation * pointsInitiaux
 
-    J = interpolation.griddata(pointsFinaux[:-1].T, I.ravel(),
-        pointsInitiaux[:-1].T, method='linear', fill_value=0 )
+    J = scipy.interpolate.griddata(pointsFinaux[:-1].T, I.ravel(),
+        pointsInitiaux[:-1].T, method='linear', fill_value=0)
     J.resize(I.shape)
 
     return J
 
-def trans_rigide_2D(I, theta, p, q):
-    """Application d'une rotation d'angle 'theta' (en radians) 
+
+def trans_rigide_2D(I, p, q, theta):
+    """Application d'une rotation d'angle 'theta' (en radians)
     et de centre (0, 0) (coin supérieur gauche) et d'une translation de
     coordonnée (p, q) à l'image 'I'
 
@@ -377,7 +524,7 @@ def trans_rigide_2D(I, theta, p, q):
     -------
 
     >>> J = tp2.trans_rigide_2D('../Data/I1.png', 0.1, 5, 5)"""
-    
+
     I = openImage(I)
     transformation = np.matrix([[np.cos(theta), -np.sin(theta), p],
         [np.sin(theta), np.cos(theta), q], [0, 0, 1]])
@@ -388,8 +535,8 @@ def trans_rigide_2D(I, theta, p, q):
 
     pointsFinaux = transformation * pointsInitiaux
 
-    J = interpolation.griddata(pointsFinaux[:-1].T, I.ravel(),
-        pointsInitiaux[:-1].T, method='linear', fill_value=0 )
+    J = scipy.interpolate.griddata(pointsFinaux[:-1].T, I.ravel(),
+        pointsInitiaux[:-1].T, method='linear', fill_value=0)
     J.resize(I.shape)
 
     imshow(I + J, 'gray')
@@ -397,17 +544,94 @@ def trans_rigide_2D(I, theta, p, q):
     return J
 
 
-def rec2drot(I, J):
-    """Recalage 2D minimisant la SSD et considérant uniquement les rotations.
-    L'énergie SSD correspondant à chaque état est sauvegardée."""
-
-def rec2dpasfixe(I, J):
+def rec2dpasfixe(I, J, stepSize=[1e-7, 1e-7, 1e-12], pqaConstCptMax=10,
+                 minDeltaPq = 0.01, minDeltaA=0.001, nItMax=10000, showEvo=False):
     """Recalage 2D minimisant la SSD par une descente de gradient.
     Considère l'ensemble des transformations rigides."""
+
+        # Descente de gradient à pas fixe.
+    I = openImage(I)
+    J = openImage(J)
+    prevPqa = np.array([0, 0, 0])
+    grad = np.array([np.inf, np.inf, np.inf])
+    # Constantes pour la condition d'arret.
+    pqaConstCpt = 0
+    prevPqa = np.array([0, 0, 0])
+
+    # (si norm(grad) < smallestGrad,pour
+    # smallGradCptMax fois de suite, la fonction est arretée. Si nIt sont
+    # faites, la fonction est aussi arretée, mais avec un warning.)
+    #smallestGrad = stepSize * 1e11  # Déterminé empiriquement pour l'instant
+    #smallGradCpt = 0  # Initialisation du compteur
+
+    # Array pour stocker les SSD
+    allSsd = np.zeros(nItMax)
+
+    for iIt in range(0, nItMax):
+        # Calcul de l'image translatée
+        IMod = trans_rigide_2D(I, prevPqa[0], prevPqa[1], prevPqa[2])
+        # Calcul du gradient selon p, q et a
+        IDiff = (IMod - J)
+
+        gradDim0, gradDim1 = np.gradient(IMod)
+        coord = np.mgrid[:J.shape[0], :J.shape[1]]
+        IDerivA = gradDim0 * (-np.sin(prevPqa[2]) * coord[0, ...]
+                             - np.cos(prevPqa[2]) * coord[1, ...]) \
+                 + gradDim1 * (np.cos(prevPqa[2]) * coord[0, ...]
+                               - np.sin(prevPqa[2]) * coord[1, ...])
+        grad[0] = -2 * (IDiff * gradDim0).sum()
+        grad[1] = -2 * (IDiff * gradDim1).sum()
+        grad[2] = -2 * (IDiff * IDerivA).sum()
+
+        # Mise à jour du vecteur de translation.
+        actualPqa = prevPqa - stepSize * grad
+        print "{}{}".format("grad = ", grad)
+        print "{}{}".format("[p,q, theta] = ", prevPqa)
+        # Calcul et stockage de la SSD
+        allSsd[iIt] = SSD(IMod, J)
+        print "{}{}".format("SSD actuel: ", allSsd[iIt])
+        # Montrer l'évolution si demandé
+        if showEvo:
+            pltRecalage2D(IMod, J)
+            time.sleep(0.05)
+        # Condition d'arret.
+        # Incrementation d'un compteur si le vecteur translation ne change pas
+        # plus qu'à une précision de minDeltaPq pixel.
+        pqModSmallEnough = (np.linalg.norm(actualPqa[0:1] - prevPqa[0:1])
+                             < minDeltaPq)
+        aModSmallEnough = (actualPqa[2] - prevPqa[2]) < minDeltaA
+        pqaModSmallEnough = pqModSmallEnough and aModSmallEnough
+        if pqaModSmallEnough:
+            pqaConstCpt += 1
+        else:
+            pqaConstCpt = 0
+        if pqaConstCpt > pqaConstCptMax:
+            convReached = True
+            break
+        prevPqa = actualPqa
+        # Incrémentation d'un compteur si le gradient est petit
+        #if np.linalg.norm(grad) < smallestGrad:
+            #smallGradCpt = smallGradCpt + 1
+        #else:
+            #smallGradCpt = 0
+        #if smallGradCpt > smallGradCptMax:
+            #convReached = True
+            #break
+
+    # Afficher un warning si la fonction s'est arretée en raison du nombre d'it
+    # max
+    if not(convReached):
+        warnings.warn("Le recalage s'est arreté car le nombre d'itérations max"
+                      " a été atteint. Le recalage peut ne pas etre optimal.")
+    # Élmination des 0 à la fin de allSsd
+    allSsd = np.delete(allSsd, range(np.minimum(iIt + 1, nItMax), nItMax))
+
+    return actualPq, ITrans, allSsd
 
 def rec2doptimize(I, J):
     """Recalage 2D minimisant la SSD par une descente de gradient optimisée.
     Considère l'ensemble des transformations rigides."""
+
 
 
 def openImage(I):
@@ -498,9 +722,85 @@ def pltRecalage2D(I, J):
     currAx.xaxis.set_visible(False)
     currAx.yaxis.set_visible(False)
 
+    plt.draw()
     plt.show(block=False)
 
     return mainFig
+
+
+def num4b(stepSize=1e-7, pqConstCptMax=10, minDeltaPq=0.01, nItMax=10000,
+          showEvo=False):
+    """Fonction qui teste rec2dtrans pour 3 translations aléatoires différentes
+    pour répondre à la question 4.b. du tp.
+
+    Paramètres
+    ----------
+    stepSize, pqConstCptMax, minDeltaPq, nItMax et showEvo: Même param que pour
+    rec2dtrans. Voir aide de cette fonction.
+
+    Exemple
+    -------
+    regPq, initPq, allSsd = tp2.num4b()
+    """
+
+    I = openImage("../Data/BrainMRI_1.jpg")
+    # Array to store the 3 initial and post-registration translations
+    initPq = np.zeros([2, 3])
+    regPq = np.zeros([2, 3])
+    # Make the whole process reproducible
+    np.random.seed(1)
+    # Make array to store ssd
+    allSsd = [0, 0, 0]
+    # Do registration for the 3 translations
+    for iPq in range(0, 3):
+        initPq[:, iPq] = (np.random.rand(2) * np.array(I.shape) - 0.5) / 4
+        ITrans = translation(I, initPq[0, iPq], initPq[1, iPq])
+        regPq[:, iPq], dum, allSsd[iPq] = rec2dtrans(ITrans, I,
+                                          stepSize=stepSize,
+                                          pqConstCptMax=pqConstCptMax,
+                                          minDeltaPq=minDeltaPq, nItMax=nItMax,
+                                          showEvo=showEvo)
+
+    return regPq, initPq, allSsd
+
+
+def num4d(stepSize=4e-12, aConstCptMax=10, minDeltaA=0.001, nItMax=10000,
+          showEvo=True):
+    """Fonction qui teste rec2drot pour 3 rotations aléatoires différentes
+    pour répondre à la question 4.d. du tp.
+
+    Paramètres
+    ----------
+    stepSize, pqConstCptMax, minDeltaPq, nItMax et showEvo: Même param que pour
+    rec2dtrans. Voir aide de cette fonction.
+
+    Exemple
+    -------
+    regA, initA, allSsd = tp2.num4d()
+    """
+
+    I = openImage("../Data/BrainMRI_1.jpg")
+    # Array to store the 3 initial and post-registration rotations
+    initA = np.zeros(3)
+    regA = np.zeros(3)
+    # Make the whole process reproducible
+    np.random.seed(1)
+    # Make array to store ssd
+    allSsd = [0, 0, 0]
+    # Do registration for the 3 rotations
+    for iA in range(0, 3):
+        initA[iA] = ((np.random.rand() * 2 - 1) * np.pi) / 8
+        IRot = rotation(I, initA[iA])
+        regA[iA], dum, allSsd[iA] = rec2drot(IRot, I, stepSize=stepSize,
+                                    aConstCptMax=aConstCptMax,
+                                    minDeltaA=minDeltaA, nItMax=nItMax,
+                                    showEvo=showEvo)
+
+    return regA, initA, allSsd
+
+
+
+
 
 # Transformations de la question 3d
 
