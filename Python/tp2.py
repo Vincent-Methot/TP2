@@ -62,7 +62,7 @@ def JointHist(I, J, nbin=256, normIm=False):
             l'histogramme. 256 par défaut.
     normIm: logique, optionnel. Si True, les images sont normalisées avant
             le calcul de l'histogramme. Ainsi, la plus basse (haute) valeur
-            de chaque image correspond au preimer (dernier) bin. Si mis à 
+            de chaque image correspond au preimer (dernier) bin. Si mis à
             True, peut créer des artéfacts dus aux arrondissements.
             Défaut: False.
 
@@ -175,7 +175,7 @@ def pltJointHist(I, J, nbin=256, normIm=False, colorMap = 'jet', cLimFrac = [0,1
         if customClim[0] == 0:
             customClim[0] = 1e-15
         customNorm = mpc.LogNorm(vmin=customClim[0],vmax=customClim[1],clip=True)
-    
+
     # Affichage de l'image
     imAxes = plt.imshow(jointHist, cmap=colorMap, clim = customClim,
         norm=customNorm, interpolation="none")
@@ -222,7 +222,7 @@ def CR(I, J):
     Retour
     ------
     CR : int. Coefficient de corrélation entre I et J
-    
+
     Exemple
     -------
     >>> CR = tp2.CR('../Data/I4.jpg', '../Data/J4.jpg')"""
@@ -275,7 +275,7 @@ def IM(I, J, nbin=256):
 
 def trans_rigide(theta, omega, phi, p, q, r):
     """Renvoie la matrice de transformation rigide en coordonnées homogènes
-    
+
     Paramètres
     ----------
     theta:     angle de rotation autour de x
@@ -301,7 +301,7 @@ def trans_rigide(theta, omega, phi, p, q, r):
 def similitude(s, theta, omega, phi, p, q, r):
     """Revoie la matrice de transformation rigide (+homothétie)
     en coordonnées homogènes
-    
+
     Paramètres
     ----------
     theta:     angle de rotation autour de x
@@ -318,7 +318,7 @@ def similitude(s, theta, omega, phi, p, q, r):
 
 
 def trans_rigide_2D(I, p, q, theta):
-    """Application d'une rotation d'angle 'theta' (en radians) et de 
+    """Application d'une rotation d'angle 'theta' (en radians) et de
     centre (0, 0) (coin supérieur gauche) et d'une translation de
     coordonnée (p, q) à l'image 'I'. La gestion de l'interpolation est
     effectuée par scipy.interpolate.
@@ -359,7 +359,7 @@ def translationcv2(I, p, q):
     """Retourne une nouvelle image correspondant à la translatée
     de l'image 'I' par le vecteur t = (p, q) (p et q peuvent être des float).
     Utilise cv2 pour la rapidité.
-    
+
     Exemple
     -------
 
@@ -410,8 +410,8 @@ def translation(I, p, q):
     return J
 
 
-def rec2dtrans(I, J, stepSize=1e-7, pqConstCptMax=10, minDeltaPq=0.01,
-               nItMax=10000, showEvo=True):
+def rec2dtrans(I, J, stepSize=1e-8, pqConstCptMax=10, minDeltaPq=0.01,
+               nItMax=5000, useCv2=True, showEvo=True):
     """Recalage 2D minimisant la SSD grâce à une descente de gradient à pas
     fixe en considérant uniquement les translations. L'énergie SSD
     correspondant à chaque état est sauvegardée. L'image I est translatée pour
@@ -530,7 +530,8 @@ def rotationcv2(I, theta):
     return J
 
 
-def rec2drot(I, J, stepSize=5e-12, aConstCptMax=10, minDeltaA=0.001, nItMax=1000, showEvo=False, useCv2=True):
+def rec2drot(I, J, stepSize=5e-12, aConstCptMax=10, minDeltaA=0.001,
+             nItMax=1000, showEvo=False, useCv2=True):
     """Recalage 2D minimisant la SSD grâce à une descente de gradient à pas
     fixe en considérant uniquement les rotations. L'énergie SSD
     correspondant à chaque état est sauvegardée. L'image I est translatée pour
@@ -979,11 +980,7 @@ def num4b(showEvo=True):
     for iPq in range(0, 3):
         initPq[:, iPq] = (np.random.rand(2) * np.array(I.shape) - 0.5) / 4
         ITrans = translation(I, initPq[0, iPq], initPq[1, iPq])
-        regPq[:, iPq], dum, allSsd[iPq] = rec2dtrans(ITrans, I,
-                                          stepSize=stepSize,
-                                          pqConstCptMax=pqConstCptMax,
-                                          minDeltaPq=minDeltaPq, nItMax=nItMax,
-                                          showEvo=showEvo)
+        regPq[:, iPq], dum, allSsd[iPq] = rec2dtrans(ITrans, I, showEvo=showEvo)
 
     return regPq, initPq, allSsd
 
@@ -1000,7 +997,7 @@ def num4d(stepSize=4e-12, aConstCptMax=10, minDeltaA=0.001, nItMax=10000,
 
     Exemple
     -------
-    >>> regA, initA, allSsd = tp2.num4d()"""
+    >>> regA, initA, allSsd = tp2.num4d()"""
 
     I = openImage("../Data/BrainMRI_1.jpg")
     # Array to store the 3 initial and post-registration rotations
