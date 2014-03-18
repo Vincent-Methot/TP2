@@ -285,14 +285,14 @@ def trans_rigide(theta, omega, phi, p, q, r):
     ----------
     gille_test: test d'une transformation à l'aide d'une grille de points"""
 
-    T = np.matrix([[1, 0, 0, p], [0, 1, 0, q], [0, 0, 1, r], [0, 0, 0, 1]])
-    Rx = np.matrix([[1, 0, 0, 0], [0, np.cos(theta), -np.sin(theta), 0],
+    T = np.array([[1, 0, 0, p], [0, 1, 0, q], [0, 0, 1, r], [0, 0, 0, 1]])
+    Rx = np.array([[1, 0, 0, 0], [0, np.cos(theta), -np.sin(theta), 0],
         [0, np.sin(theta), np.cos(theta), 0], [0, 0, 0, 1]])
-    Ry = np.matrix([[np.cos(omega), 0, -np.sin(omega), 0], [0, 1, 0, 0],
+    Ry = np.array([[np.cos(omega), 0, -np.sin(omega), 0], [0, 1, 0, 0],
         [np.sin(omega), 0, np.cos(omega), 0], [0, 0, 0, 1]])
-    Rz = np.matrix([[np.cos(phi), -np.sin(phi), 0, 0], [np.sin(phi), np.cos(phi), 0, 0],
+    Rz = np.array([[np.cos(phi), -np.sin(phi), 0, 0], [np.sin(phi), np.cos(phi), 0, 0],
         [0, 0, 1, 0], [0, 0, 0, 1]])
-    Transformation = T * Rz * Ry * Rx
+    Transformation = np.dot(T, np.dot(Rz, np.dot(Ry, Rx)))
 
     return Transformation
 
@@ -669,7 +669,7 @@ def rec2doptimize(I, J):
     Considère l'ensemble des transformations rigides."""
 
 
-def grille_test(transformation, xmax = 6, ymax = 6, zmax = 2):
+def grille_test(transformation=np.eye(4), xmax = 6, ymax = 6, zmax = 2):
     """Test des transformations à l'aide d'une grille de points.
     ---------------------------------------------------------
     transformation: matrice de transformation 3D en coordonnées homogènes
@@ -685,12 +685,12 @@ def grille_test(transformation, xmax = 6, ymax = 6, zmax = 2):
     ax = fig.add_subplot(111, projection='3d')
 
     xis, yis, zis = np.mgrid[:xmax,:ymax,:zmax]
-    pis = np.matrix([xis.ravel(), yis.ravel(), zis.ravel(),
+    pis = np.array([xis.ravel(), yis.ravel(), zis.ravel(),
         ones(xis.shape).ravel()]).T
     ax.scatter(xis, yis, zis, c='b')
 
-    pfs = pis * transformation
-    xfs, yfs, zfs, uns = array(pfs.T)
+    pfs = np.dot(transformation, pis.T)
+    xfs, yfs, zfs, uns = array(pfs)
     ax.scatter(xfs, yfs, zfs, c='r')
 
     ax.set_xlabel('X Label')
