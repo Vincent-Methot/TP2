@@ -315,7 +315,7 @@ def translationcv2(I, p, q):
     return J
 
 
-def rec2dtrans(I, J, stepSize=5e-8, pqConstCptMax=10, minDeltaPq=0.01, nItMax=1000, showEvo=False, useCv2=True):
+def rec2dtrans(I, J, stepSize=1e-8, pqConstCptMax=10, minDeltaPq=0.01, nItMax=1000, showEvo=False, useCv2=True):
     """Recalage 2D minimisant la SSD grâce à une descente de gradient à pas
     fixe en considérant uniquement les translations. L'énergie SSD
     correspondant à chaque état est sauvegardée. L'image I est translatée pour
