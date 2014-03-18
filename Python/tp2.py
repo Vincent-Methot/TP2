@@ -132,8 +132,7 @@ def verifSommeHisto(I, J, nbin=256):
 
     Exemple
     -------
-    ­>>> tp2.verifSommeHisto('../Data/I1.png','../Data/J1.png')
-    """
+    ­>>> tp2.verifSommeHisto('../Data/I1.png','../Data/J1.png'"""
 
     jointHist = JointHist(I, J, nbin)
     I = openImage(I)
@@ -141,7 +140,7 @@ def verifSommeHisto(I, J, nbin=256):
     return I.size == jointHist.sum()
 
 
-def pltJointHist(I, J, nbin=256, normIm=False, colorMap = 'jet', cLimFrac = [0,1], useLogNorm = False):
+def pltJointHist(I, J, nbin=256, normIm=False, colorMap = 'jet', cLimFrac = [0,1], useLogNorm = True):
     """Affiche l'histogramme conjoint des images I et J avec l'origine située
     dans le coin inférieur gauche.
 
@@ -159,8 +158,7 @@ def pltJointHist(I, J, nbin=256, normIm=False, colorMap = 'jet', cLimFrac = [0,1
     Exemple
     -------
     ­>>> tp2.pltJointHist('../Data/I3.jpg','../Data/J3.jpg',cLimFrac = [0,0.0005])
-    ­>>> tp2.pltJointHist('../Data/I3.jpg','../Data/J3.jpg',useLogNorm=True)
-    """
+    ­>>> tp2.pltJointHist('../Data/I3.jpg','../Data/J3.jpg',useLogNorm=True)"""
 
     jointHist = JointHist(I, J, nbin, normIm)
     mainFig = plt.figure('IMN530 - Histogramme conjoint')
@@ -184,7 +182,7 @@ def pltJointHist(I, J, nbin=256, normIm=False, colorMap = 'jet', cLimFrac = [0,1
     plt.draw()
     plt.show(block=False)
 
-    return mainFig, imAxess
+    return mainFig, imAxes
 
 
 def SSD(I, J, nbin=256):
@@ -207,20 +205,18 @@ def SSD(I, J, nbin=256):
 
     # Calcul de la SSD à partir de l'histogramme conjoint
     H = JointHist(I, J, nbin)
-    i, j = np.meshgrid(range(nbin), range(nbin))
+    j, i = np.meshgrid(range(nbin), range(nbin))
     SSD = (H*(i - j)**2).sum()
 
     return SSD
 
-def CR(I, J, nbin=256):
+def CR(I, J):
     """Calcule le coefficient de corrélation entre 2 images (I et J)
     de même taille
 
     Paramètres
     ----------
     I et J: array. Images (2D) en format NifTi-1, jpg ou png.
-    nbin:   int, optionnel. Le nombre de bins pour le calcul de
-            l'histogramme. 256 par défaut.
 
     Retour
     ------
@@ -230,18 +226,12 @@ def CR(I, J, nbin=256):
     -------
     >>> CR = tp2.CR('../Data/I4.jpg', '../Data/J4.jpg')"""
 
-    # Calcul de l'histogramme conjoint de I et J
-    H = JointHist(I, J, nbin)
-    i, j = np.meshgrid(range(nbin), range(nbin))
+    I = openImage(I)
+    J = openImage(J)
 
-    # Calcul des valeurs moyennes de chaque image à partir de l'histogramme
-    meanI = 1. / H.sum() * (H * i).sum()
-    meanJ = 1. / H.sum() * (H * j).sum()
-
-    # Calcul des covariances (I-I, I-J et J-J)
-    covariance = (H * (i - meanI) * (j - meanJ)).sum()
-    autocovI = 1. / H.sum() * (H * i**2 - meanI**2).sum()
-    autocovJ = 1. / H.sum() * (H * j**2 - meanJ**2).sum()
+    covariance = ((I - I.mean()) * (J - J.mean())).sum()
+    autocovI = ((I - I.mean())**2).sum()
+    autocovJ = ((J - J.mean())**2).sum()
 
     # Calcul du coefficient de corrélation à partir des covariances
     CR = covariance / np.sqrt(autocovI * autocovJ)
@@ -764,8 +754,7 @@ def num4b(stepSize=1e-7, pqConstCptMax=10, minDeltaPq=0.01, nItMax=10000,
 
     Exemple
     -------
-    regPq, initPq, allSsd = tp2.num4b()
-    """
+    >>> regPq, initPq, allSsd = tp2.num4b()"""
 
     I = openImage("../Data/BrainMRI_1.jpg")
     # Array to store the 3 initial and post-registration translations
@@ -800,8 +789,7 @@ def num4d(stepSize=4e-12, aConstCptMax=10, minDeltaA=0.001, nItMax=10000,
 
     Exemple
     -------
-    regA, initA, allSsd = tp2.num4d()
-    """
+    >>> regA, initA, allSsd = tp2.num4d()"""
 
     I = openImage("../Data/BrainMRI_1.jpg")
     # Array to store the 3 initial and post-registration rotations
