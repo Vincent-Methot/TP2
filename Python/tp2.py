@@ -185,7 +185,7 @@ def pltJointHist(I, J, nbin=256, normIm=False, colorMap = 'jet', cLimFrac = [0,1
     return mainFig, imAxes
 
 
-def SSD(I, J, nbin=256):
+def SSD(I, J):
     """Calcule la somme des différences au carré entre 2 images (I et J)
     de même taille.
 
@@ -203,10 +203,9 @@ def SSD(I, J, nbin=256):
     -------
     >>> SSD = tp2.SSD('../Data/I4.jpg', '../Data/J4.jpg')"""
 
-    # Calcul de la SSD à partir de l'histogramme conjoint
-    H = JointHist(I, J, nbin)
-    j, i = np.meshgrid(range(nbin), range(nbin))
-    SSD = (H*(i - j)**2).sum()
+    I = openImage(I)
+    J = openImage(J)
+    SSD = ((I - J)**2).sum()
 
     return SSD
 
@@ -256,23 +255,19 @@ def IM(I, J, nbin=256):
     >>> IM = tp2.IM('../Data/I4.jpg', '../Data/J4.jpg')"""
 
     # Définition de P_{ij}
-    H = JointHist(I, J, nbin)
-    H = H.astype(float)/H.sum()
+    H = JointHist(I, J, nbin).astype(float)
+    P = H/H.sum()
+    P[P == 0] = 1e-9
 
     # Définition de P_i et P_j par broadcasting
-    Hi = np.empty(list(H.shape))
-    Hj = np.empty(list(H.shape))
-    Hi[:] = H.sum(0)
-    Hj[:] = H.sum(1)
-
-    # On remplace les 0 par des 1 dans l'histogramme. Ceci permet de se
-    # débarasser de la divergence du log de 0 et des divisions par 0.
-    H[H == 0] = 1
-    Hi[Hi == 0] = 1
-    Hj[Hj == 0] = 1
+    Pi = np.empty(list(P.shape))
+    Pj = np.empty(list(P.shape))
+    Pi[:] = P.sum(0)
+    Pj[:] = P.sum(1)
+    Pj = Pj.T
 
     # Calcul de l'information mutuelle
-    IM = (H * log(H / (Hi * Hj))).sum()
+    IM = (P * log(P / (Pi * Pj))).sum()
 
     return IM
 
