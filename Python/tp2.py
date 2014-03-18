@@ -671,15 +671,15 @@ def rec2doptimize(I, J):
 
 def grille_test(transformation, xmax = 6, ymax = 6, zmax = 2):
     """Test des transformations à l'aide d'une grille de points.
----------------------------------------------------------
-transformation: matrice de transformation 3D en coordonnées homogènes
-xmax, ymax, zmax: limites de la grille de point (min à 0)
+    ---------------------------------------------------------
+    transformation: matrice de transformation 3D en coordonnées homogènes
+    xmax, ymax, zmax: limites de la grille de point (min à 0)
 
-Exemple:
---------
->>> tp2.grille_test([[2, 0, 0, 5.5], [0, 3, 0, 4.5], [0, 0, 1, 4.5],
-[0, 0, 0, 1]])
->>> tp2.grille_test(tp2.M3)"""
+    Exemple:
+    --------
+    >>> tp2.grille_test([[2, 0, 0, 5.5], [0, 3, 0, 4.5], [0, 0, 1, 4.5],
+    [0, 0, 0, 1]])
+    >>> tp2.grille_test(tp2.M3)"""
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
